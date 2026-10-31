@@ -75,7 +75,7 @@
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
   .field { display: flex; flex-direction: column; gap: 6px; }
   .field label { font-size: 12px; color: var(--muted); font-weight: 500; }
-  input[type="text"] {
+  input[type="text"], input[type="password"] {
     width: 100%; background: var(--surface-2); color: var(--text);
     border: 1px solid var(--border); border-radius: 10px;
     padding: 9px 12px; font-size: 13px; font-family: inherit;
@@ -145,6 +145,16 @@
   }
   .crumb { cursor: pointer; padding: 2px 6px; border-radius: 6px; transition: background .15s; }
   .crumb:hover { background: var(--surface-2); color: var(--accent); }
+
+  .stat { font-size: 12px; font-weight: 400; color: var(--muted); margin-left: 6px; }
+  .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .chip {
+    border: 1px solid var(--border); background: var(--surface-2); color: var(--muted);
+    padding: 4px 11px; border-radius: 999px; font-size: 12px; font-family: inherit; cursor: pointer;
+    transition: border-color .15s, background .15s, color .15s;
+  }
+  .chip:hover { border-color: var(--accent); color: var(--text); }
+  .chip.on { border-color: rgba(79,140,255,.55); background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 
   .files { display: flex; flex-direction: column; gap: 6px; }
   .frow {
@@ -224,6 +234,7 @@
     <div class="card-head">
       <div class="card-title">上传文件</div>
       <div class="row">
+        <input id="fPass" type="password" placeholder="上传/删除口令" autocomplete="current-password" style="width:150px" />
         <input id="fFolder" type="text" placeholder="目标子目录（可留空）" autocomplete="off" style="width:180px" />
       </div>
     </div>
@@ -254,13 +265,14 @@
   <!-- 云端文件 -->
   <section class="card">
     <div class="card-head">
-      <div class="card-title">云端文件</div>
+      <div class="card-title">云端文件<span class="stat" id="statLine"></span></div>
       <div class="row">
         <button class="btn sm ghost" id="btnRefresh">刷新</button>
       </div>
     </div>
 
     <div class="pathbar" id="pathbar"></div>
+    <div class="filters" id="filters"></div>
     <div class="files" id="fileList">
       <div class="empty">正在加载…</div>
     </div>
@@ -293,7 +305,51 @@
   let ready = false;
   let currentPath = '';
   let running = false;
+  let fileItems = [];
+  let fileFilter = 'all';
   const queue = [];
+
+  // ---------- 口令 ----------
+  const PASS_KEY = 'fc_pass';
+
+  function storedPass() {
+    try { return localStorage.getItem(PASS_KEY) || ''; } catch (e) { return ''; }
+  }
+
+  /** 取口令；为空时提示并聚焦输入框，返回 null */
+  function getPass() {
+    const v = String($('fPass').value || '').trim();
+    if (!v) {
+      toast('请先输入上传/删除口令', 'err');
+      $('fPass').focus();
+      return null;
+    }
+    return v;
+  }
+
+  // ---------- 文件分类 ----------
+  const CATS = [
+    { key: 'all', label: '全部' },
+    { key: 'image', label: '图片' },
+    { key: 'doc', label: '文档' },
+    { key: 'zip', label: '压缩包' },
+    { key: 'other', label: '其他' },
+  ];
+  const CAT_EXT = {
+    image: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico', 'avif', 'heic', 'tif', 'tiff'],
+    doc: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'md', 'csv', 'json', 'html', 'htm', 'xml', 'rtf', 'odt', 'ods', 'odp', 'epub'],
+    zip: ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'tgz', 'zst', 'iso'],
+  };
+
+  function catOf(name) {
+    const i = String(name).lastIndexOf('.');
+    if (i <= 0) return 'other';
+    const ext = String(name).slice(i + 1).toLowerCase();
+    for (const k in CAT_EXT) {
+      if (CAT_EXT[k].indexOf(ext) >= 0) return k;
+    }
+    return 'other';
+  }
 
   // ---------- 小工具 ----------
   function toast(msg, kind) {
@@ -426,14 +482,16 @@
         data = await listDir(currentPath);
       } catch (e) {
         if (e.status === 404) {
-          $('fileList').innerHTML = '<div class="empty">这里还没有文件，上传第一个吧</div>';
+          fileItems = [];
+          renderFiles();
           return;
         }
         throw e;
       }
       const items = Array.isArray(data) ? data : (data ? [data] : []);
       if (!items.length) {
-        $('fileList').innerHTML = '<div class="empty">这里还没有文件，上传第一个吧</div>';
+        fileItems = [];
+        renderFiles();
         return;
       }
       const pinned = (it) => {
@@ -456,7 +514,37 @@
         return a.name.localeCompare(b.name);
       });
 
-      $('fileList').innerHTML = items.map((it) => {
+      fileItems = items;
+      renderFiles();
+    } catch (e) {
+      $('fileList').innerHTML = '<div class="empty">加载失败：' + esc(e.message) + '</div>';
+    }
+  }
+
+  function renderFiles() {
+    const files = fileItems.filter((it) => it.type !== 'dir');
+    const counts = { all: files.length, image: 0, doc: 0, zip: 0, other: 0 };
+    files.forEach((it) => { counts[catOf(it.name)]++; });
+
+    $('filters').innerHTML = files.length
+      ? CATS.map((c) =>
+          '<button class="chip' + (fileFilter === c.key ? ' on' : '') + '" data-cat="' + c.key + '">' +
+            c.label + ' ' + counts[c.key] + '</button>').join('')
+      : '';
+    $('filters').querySelectorAll('.chip').forEach((el) => {
+      el.addEventListener('click', () => { fileFilter = el.dataset.cat; renderFiles(); });
+    });
+
+    const items = fileItems.filter((it) =>
+      it.type === 'dir' || fileFilter === 'all' || catOf(it.name) === fileFilter);
+
+    if (!items.length) {
+      $('fileList').innerHTML = '<div class="empty">' +
+        (fileFilter === 'all' ? '这里还没有文件，上传第一个吧' : '该分类下没有文件') + '</div>';
+      return;
+    }
+
+    $('fileList').innerHTML = items.map((it) => {
         const isDir = it.type === 'dir';
         const icon = isDir
           ? '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>'
@@ -487,8 +575,18 @@
       $('fileList').querySelectorAll('[data-del]').forEach((el) => {
         el.addEventListener('click', () => deleteFile(el.dataset.del, el.dataset.sha, el.dataset.dir === 'true'));
       });
+  }
+
+  // ---------- 仓库统计 ----------
+  async function loadStats() {
+    if (!ready) return;
+    try {
+      const res = await fetch(workerBase() + '/stats', { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const s = await res.json();
+      $('statLine').textContent = '共 ' + (s.files || 0) + ' 个文件 · ' + fmtSize(s.bytes || 0);
     } catch (e) {
-      $('fileList').innerHTML = '<div class="empty">加载失败：' + esc(e.message) + '</div>';
+      $('statLine').textContent = '';
     }
   }
 
@@ -534,24 +632,27 @@
       return;
     }
     const target = isDir ? '文件夹「' + path + '」及其中所有文件' : '「' + path + '」';
+    const pass = getPass();
+    if (!pass) return;
     if (!confirm('确定要删除 ' + target + ' 吗？会直接提交到仓库，无法撤销。')) return;
     try {
-      if (isDir) await deleteDir(path);
-      else await postJSON(workerBase() + '/delete', { path, sha: sha || '', password: backend.password, message: 'delete: ' + path });
+      if (isDir) await deleteDir(path, pass);
+      else await postJSON(workerBase() + '/delete', { path, sha: sha || '', password: pass, message: 'delete: ' + path });
       toast('已删除 ' + path, 'ok');
       loadFiles(currentPath);
+      loadStats();
     } catch (e) {
       toast('删除失败：' + e.message, 'err');
     }
   }
 
-  async function deleteDir(path) {
+  async function deleteDir(path, pass) {
     const list = await listDir(path);
     if (!Array.isArray(list)) return;
     for (const it of list.slice().reverse()) {
       const child = path + '/' + it.name;
-      if (it.type === 'dir') await deleteDir(child);
-      else await postJSON(workerBase() + '/delete', { path: child, sha: it.sha, password: backend.password });
+      if (it.type === 'dir') await deleteDir(child, pass);
+      else await postJSON(workerBase() + '/delete', { path: child, sha: it.sha, password: pass });
     }
   }
 
@@ -594,6 +695,7 @@
 
   function addFiles(fileList) {
     if (!ready) { toast('上传后端未配置，暂时无法上传', 'err'); return; }
+    if (!getPass()) return;
     const folder = $('fFolder').value.trim().replace(/^\/+|\/+$/g, '');
     let added = 0;
     for (const file of Array.from(fileList)) {
@@ -630,10 +732,18 @@
     if (okCount) {
       toast('已上传 ' + okCount + ' 个文件', 'ok');
       loadFiles(currentPath);
+      loadStats();
     }
   }
 
   async function uploadOne(item) {
+    const pass = getPass();
+    if (!pass) {
+      item.status = 'err';
+      item.error = '缺少口令';
+      renderQueue();
+      return;
+    }
     item.status = 'run';
     item.progress = 0;
     renderQueue();
@@ -655,7 +765,7 @@
       await postJSON(workerBase() + '/upload', {
         path: item.path,
         content: b64,
-        password: backend.password,
+        password: pass,
         message: 'upload: ' + item.path,
       }, (p) => {
         item.progress = p;
@@ -679,6 +789,7 @@
       const ok = await loadBackendConfig();
       toast(ok ? '后端已就绪' : '仍未读到 backend.json 里的 workerUrl', ok ? 'ok' : 'err');
       if (ok) loadFiles(currentPath);
+      if (ok) loadStats();
     });
 
     const drop = $('drop');
@@ -709,7 +820,10 @@
       }
       renderQueue();
     });
-    $('btnRefresh').addEventListener('click', () => loadFiles(currentPath));
+    $('btnRefresh').addEventListener('click', () => { loadFiles(currentPath); loadStats(); });
+    $('fPass').addEventListener('input', (e) => {
+      try { localStorage.setItem(PASS_KEY, e.target.value); } catch (err) {}
+    });
   }
 
   // ---------- 启动 ----------
@@ -719,7 +833,9 @@
     bind();
     renderPathbar();
     await loadBackendConfig();
+    $('fPass').value = storedPass() || backend.password || '';
     loadFiles('');
+    loadStats();
   }
 
   document.addEventListener('DOMContentLoaded', init);
