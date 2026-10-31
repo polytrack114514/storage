@@ -41,7 +41,7 @@ GitHub 仓库 polytrack114514/storage
 
 - 本仓库是**公开仓库**，上传的文件任何人都能看到，请勿存放敏感内容
 - 单文件最大 100 MB
-- `backend.json`、`index.html`、`README.md` 为基础文件，页面上标记为「不可删除」且不提供删除按钮
+- `backend.json`、`index.html`、`README.md` 为基础文件：页面标记为「不可删除」、不提供删除按钮，上传同名文件也会被自动跳过
 - 如果不想让陌生人随意上传，在 Worker 里设置 `UPLOAD_PASSWORD`，并把同样的口令填进 `backend.json` 的 `password` 字段
 - 适合文档、图片、代码等小文件，不适合当网盘存放大量大文件
 
