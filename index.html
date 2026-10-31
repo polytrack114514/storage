@@ -28,17 +28,12 @@
     color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
       "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-    font-size: 14px;
-    line-height: 1.6;
-    min-height: 100vh;
+    font-size: 14px; line-height: 1.6; min-height: 100vh;
     -webkit-font-smoothing: antialiased;
   }
   .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 20px 80px; }
 
-  header {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 16px; flex-wrap: wrap; margin-bottom: 24px;
-  }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
   .brand { display: flex; align-items: center; gap: 12px; }
   .logo {
     width: 40px; height: 40px; border-radius: 11px; flex: none;
@@ -66,29 +61,21 @@
     background: var(--surface); border: 1px solid var(--border);
     border-radius: var(--radius); padding: 20px; margin-bottom: 18px;
   }
-  .card-head {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 12px; margin-bottom: 14px; flex-wrap: wrap;
-  }
+  .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
   .card-title { font-size: 14px; font-weight: 620; display: flex; align-items: center; gap: 8px; }
-  .card-title .num {
-    width: 20px; height: 20px; border-radius: 6px; background: var(--accent-soft);
-    color: var(--accent); font-size: 11px; font-weight: 700;
-    display: grid; place-items: center; flex: none;
-  }
 
-  .connected {
-    display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
-    background: rgba(53, 192, 122, .06); border: 1px solid rgba(53, 192, 122, .22);
-    border-radius: 12px; padding: 10px 14px; margin-bottom: 18px; font-size: 13px;
+  .banner {
+    display: flex; gap: 10px; align-items: flex-start; flex-wrap: wrap;
+    background: rgba(232, 163, 61, .07); border: 1px solid rgba(232, 163, 61, .28);
+    border-radius: 12px; padding: 13px 15px; margin-bottom: 18px; font-size: 13px;
+    color: #e9c184;
   }
-  .connected .lbl { color: var(--text); font-weight: 550; }
-  .connected .tip { color: var(--muted); font-size: 12px; }
+  .banner b { color: #f3d3a0; }
 
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
   .field { display: flex; flex-direction: column; gap: 6px; }
-  .field label { font-size: 12px; color: var(--muted); font-weight: 500; letter-spacing: .2px; }
-  input[type="text"], input[type="password"] {
+  .field label { font-size: 12px; color: var(--muted); font-weight: 500; }
+  input[type="text"] {
     width: 100%; background: var(--surface-2); color: var(--text);
     border: 1px solid var(--border); border-radius: 10px;
     padding: 9px 12px; font-size: 13px; font-family: inherit;
@@ -101,17 +88,10 @@
     display: inline-flex; align-items: center; justify-content: center; gap: 7px;
     border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text);
     padding: 8px 15px; border-radius: 10px; font-size: 13px; font-family: inherit;
-    cursor: pointer; transition: background .16s, border-color .16s, transform .1s;
-    white-space: nowrap;
+    cursor: pointer; transition: background .16s, border-color .16s, transform .1s; white-space: nowrap;
   }
   .btn:hover { border-color: var(--accent); background: #202634; }
   .btn:active { transform: scale(.975); }
-  .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
-  .btn.primary {
-    background: linear-gradient(135deg, #4f8cff, #6a6bff); border-color: transparent;
-    font-weight: 600; box-shadow: 0 8px 20px -10px rgba(79, 140, 255, .9);
-  }
-  .btn.primary:hover { filter: brightness(1.08); }
   .btn.ghost { background: transparent; border-color: var(--border); }
   .btn.sm { padding: 5px 10px; font-size: 12px; border-radius: 8px; }
   .btn.danger { color: var(--err); border-color: rgba(240, 98, 107, .35); }
@@ -120,11 +100,12 @@
   .drop {
     border: 1.5px dashed var(--border-strong); border-radius: 12px;
     padding: 34px 20px; text-align: center; cursor: pointer;
-    transition: border-color .18s, background .18s;
-    background: rgba(255, 255, 255, .012);
+    transition: border-color .18s, background .18s; background: rgba(255, 255, 255, .012);
   }
   .drop:hover { border-color: var(--accent); background: var(--accent-soft); }
   .drop.over { border-color: var(--accent); background: var(--accent-soft); border-style: solid; }
+  .drop.off { opacity: .45; cursor: not-allowed; }
+  .drop.off:hover { border-color: var(--border-strong); background: rgba(255,255,255,.012); }
   .drop svg { width: 34px; height: 34px; stroke: var(--muted); margin-bottom: 8px; }
   .drop.over svg { stroke: var(--accent); }
   .drop-main { font-size: 14px; font-weight: 600; }
@@ -136,14 +117,12 @@
     background: rgba(255,255,255,.02); border: 1px solid var(--border);
     border-radius: 10px; padding: 10px 12px;
   }
-  .hint.warn { color: #e9c184; border-color: rgba(232,163,61,.25); background: rgba(232,163,61,.06); }
 
   .queue { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
   .item {
     display: flex; align-items: center; gap: 12px;
     background: var(--surface-2); border: 1px solid var(--border);
-    border-radius: 10px; padding: 10px 12px;
-    animation: fade .22s ease;
+    border-radius: 10px; padding: 10px 12px; animation: fade .22s ease;
   }
   @keyframes fade { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
   .item .fname { font-weight: 550; font-size: 13px; word-break: break-all; }
@@ -151,8 +130,7 @@
   .grow { flex: 1; min-width: 0; }
   .badge {
     font-size: 11px; padding: 2px 9px; border-radius: 999px; font-weight: 600;
-    background: var(--surface); border: 1px solid var(--border); color: var(--muted);
-    flex: none;
+    background: var(--surface); border: 1px solid var(--border); color: var(--muted); flex: none;
   }
   .badge.ok { color: var(--ok); border-color: rgba(53,192,122,.35); background: rgba(53,192,122,.1); }
   .badge.err { color: var(--err); border-color: rgba(240,98,107,.35); background: rgba(240,98,107,.1); }
@@ -170,9 +148,8 @@
 
   .files { display: flex; flex-direction: column; gap: 6px; }
   .frow {
-    display: flex; align-items: center; gap: 12px;
-    padding: 9px 12px; border-radius: 10px;
-    border: 1px solid transparent; transition: background .15s, border-color .15s;
+    display: flex; align-items: center; gap: 12px; padding: 9px 12px;
+    border-radius: 10px; border: 1px solid transparent; transition: background .15s, border-color .15s;
   }
   .frow:hover { background: var(--surface-2); border-color: var(--border); }
   .ficon { width: 28px; height: 28px; border-radius: 8px; background: var(--surface-2); display: grid; place-items: center; flex: none; }
@@ -203,8 +180,6 @@
   .checkbox { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--muted); cursor: pointer; user-select: none; }
   .checkbox input { accent-color: var(--accent); width: 14px; height: 14px; }
 
-  .setup-note { color: var(--muted); font-size: 12.5px; margin: -4px 0 14px; }
-
   @media (max-width: 620px) {
     .wrap { padding: 18px 14px 70px; }
     .card { padding: 16px; }
@@ -222,71 +197,29 @@
       </div>
       <div>
         <h1>文件云盘</h1>
-        <div class="sub">把文件从任意电脑上传到 GitHub，随时查看与下载</div>
+        <div class="sub">拖拽上传，云端保存，随时下载 · 无需登录</div>
       </div>
     </div>
     <a class="repo-chip" id="repoLink" href="#" target="_blank" rel="noopener">
       <span class="dot off" id="statusDot"></span>
-      <span id="repoLabel">未连接</span>
+      <span id="repoLabel">文件云盘</span>
     </a>
   </header>
 
-  <!-- 已连接状态条 -->
-  <div class="connected" id="connectedBar" hidden>
-    <span class="dot on"></span>
-    <span class="lbl" id="connectedLabel">已连接</span>
-    <span class="tip">令牌已保存在本机，无需再次填写</span>
-    <div class="spacer"></div>
-    <button class="btn sm ghost" id="btnOpenSetup">更换帐户</button>
+  <!-- 后端未配置提示 -->
+  <div class="banner" id="banner" hidden>
+    <span>⚠️</span>
+    <span class="grow">
+      <b>上传后端尚未配置</b>，现在只能浏览和下载。请先部署 Cloudflare Worker，并把地址填进仓库的
+      <code>backend.json</code>。
+    </span>
+    <button class="btn sm ghost" id="btnReload">重新载入配置</button>
   </div>
-
-  <!-- 一次性设置 -->
-  <section class="card" id="setupCard" hidden>
-    <div class="card-head">
-      <div class="card-title"><span class="num" id="numSetup">1</span>一次性设置</div>
-      <div class="row">
-        <button class="btn sm ghost" id="btnHelp">如何获取令牌？</button>
-        <button class="btn sm primary" id="btnSave">保存并连接</button>
-      </div>
-    </div>
-
-    <p class="setup-note">只需要设置这一次。设置完成后本机会自动记住，之后打开页面直接拖文件即可上传。</p>
-
-    <div class="grid">
-      <div class="field">
-        <label for="fOwner">仓库所有者</label>
-        <input id="fOwner" type="text" placeholder="用户名或组织名" autocomplete="off" />
-      </div>
-      <div class="field">
-        <label for="fRepo">仓库名称</label>
-        <input id="fRepo" type="text" placeholder="file-cloud-storage" autocomplete="off" />
-      </div>
-      <div class="field">
-        <label for="fBranch">分支</label>
-        <input id="fBranch" type="text" placeholder="main" autocomplete="off" />
-      </div>
-      <div class="field">
-        <label for="fToken">访问令牌 (PAT)</label>
-        <input id="fToken" type="password" placeholder="github_pat_... 或 ghp_..." autocomplete="off" spellcheck="false" />
-      </div>
-    </div>
-
-    <div class="row" style="margin-top:12px">
-      <span class="fmeta" id="connState">未连接</span>
-      <div class="spacer"></div>
-      <button class="btn sm ghost" id="btnForget" hidden>清除本机保存的令牌</button>
-    </div>
-
-    <div class="hint">
-      <span>🔒</span>
-      <span>令牌只保存在<b>你自己的浏览器</b>里，只会发送给 <b>api.github.com</b>。本页面是纯静态的，没有任何后端，不会把令牌发给第三方。</span>
-    </div>
-  </section>
 
   <!-- 上传 -->
   <section class="card">
     <div class="card-head">
-      <div class="card-title"><span class="num" id="numUpload">2</span>上传文件</div>
+      <div class="card-title">上传文件</div>
       <div class="row">
         <input id="fFolder" type="text" placeholder="目标子目录（可留空）" autocomplete="off" style="width:180px" />
       </div>
@@ -299,7 +232,7 @@
         <line x1="12" y1="3" x2="12" y2="15"/>
       </svg>
       <div class="drop-main" id="dropMain">拖拽文件到这里，或点击选择</div>
-      <div class="drop-sub" id="dropSub">支持多文件 / 多选，单文件最大 100 MB</div>
+      <div class="drop-sub" id="dropSub">支持多文件 / 整个文件夹，单文件最大 100 MB</div>
     </div>
 
     <div class="row" style="margin-top:12px">
@@ -318,7 +251,7 @@
   <!-- 云端文件 -->
   <section class="card">
     <div class="card-head">
-      <div class="card-title"><span class="num" id="numFiles">3</span>云端文件</div>
+      <div class="card-title">云端文件</div>
       <div class="row">
         <button class="btn sm ghost" id="btnRefresh">刷新</button>
       </div>
@@ -338,25 +271,33 @@
 (function () {
   'use strict';
 
+  // ====== 可修改的仓库参数 ======
+  const CFG = {
+    owner: 'polytrack114514',
+    repo: 'file-cloud-storage',
+    branch: 'main',
+  };
+  // =============================
+
   const API = 'https://api.github.com';
-  const LS_KEY = 'gh-file-cloud-settings-v2';
   const MAX_FILE = 100 * 1024 * 1024;
   const WARN_FILE = 20 * 1024 * 1024;
 
   const $ = (id) => document.getElementById(id);
 
-  const cfg = { owner: '', repo: '', branch: 'main', token: '' };
+  let backend = { workerUrl: '', password: '' };
+  let ready = false;
   let currentPath = '';
-  let connected = false;
-  let setupVisible = true;
+  let running = false;
+  const queue = [];
 
-  // ---------- 工具 ----------
+  // ---------- 小工具 ----------
   function toast(msg, kind) {
     const el = $('toast');
     el.textContent = msg;
     el.className = 'toast show' + (kind ? ' ' + kind : '');
     clearTimeout(el._t);
-    el._t = setTimeout(() => { el.className = 'toast' + (kind ? ' ' + kind : ''); }, 3200);
+    el._t = setTimeout(() => { el.className = 'toast' + (kind ? ' ' + kind : ''); }, 3400);
   }
 
   function fmtSize(n) {
@@ -372,312 +313,94 @@
   }
 
   function encPath(p) {
-    return p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
+    return String(p || '').split('/').filter(Boolean).map(encodeURIComponent).join('/');
   }
 
-  function contentsUrl(path, withRef) {
-    let u = '/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo) + '/contents';
-    const enc = encPath(path);
+  function ghPath(p, withRef) {
+    let u = '/repos/' + encodeURIComponent(CFG.owner) + '/' + encodeURIComponent(CFG.repo) + '/contents';
+    const enc = encPath(p);
     if (enc) u += '/' + enc;
-    if (withRef !== false) u += '?ref=' + encodeURIComponent(cfg.branch);
+    if (withRef !== false) u += '?ref=' + encodeURIComponent(CFG.branch);
     return u;
   }
 
-  function saveSettings() {
-    try {
-      localStorage.setItem(LS_KEY, JSON.stringify({
-        owner: cfg.owner, repo: cfg.repo, branch: cfg.branch, token: cfg.token
-      }));
-    } catch (e) { /* 隐私模式下可能失败 */ }
+  function workerBase() {
+    return backend.workerUrl.replace(/\/+$/, '');
   }
 
-  function loadSettings() {
+  // ---------- 读取后端配置 ----------
+  async function loadBackendConfig() {
+    let cfg = null;
     try {
-      const s = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
-      if (s && typeof s === 'object') {
-        cfg.owner = s.owner || '';
-        cfg.repo = s.repo || '';
-        cfg.branch = s.branch || 'main';
-        cfg.token = s.token || '';
-      }
-    } catch (e) { /* ignore */ }
+      const res = await fetch('backend.json?t=' + Date.now(), { cache: 'no-store' });
+      if (res.ok) cfg = await res.json();
+    } catch (e) { /* 本地直开或文件缺失 */ }
+
+    backend.workerUrl = (cfg && String(cfg.workerUrl || '').trim()) || '';
+    backend.password = (cfg && cfg.password) || '';
+    ready = !!backend.workerUrl;
+
+    $('banner').hidden = ready;
+    $('statusDot').className = 'dot ' + (ready ? 'on' : 'off');
+    $('drop').classList.toggle('off', !ready);
+    $('dropMain').textContent = ready ? '拖拽文件到这里，或点击选择' : '上传后端未配置，暂时无法上传';
+    $('btnPickFiles').disabled = !ready;
+    $('btnPickFolder').disabled = !ready;
+    return ready;
   }
 
-  function isConfigured() { return !!(cfg.owner && cfg.repo && cfg.token); }
-
-  // ---------- HTTP ----------
-  async function apiGet(path) {
-    const headers = { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
-    if (cfg.token) headers.Authorization = 'Bearer ' + cfg.token;
-    const res = await fetch(API + path, { headers });
+  // ---------- 请求封装 ----------
+  async function getJSON(url) {
+    const res = await fetch(url, { headers: { Accept: 'application/vnd.github+json' } });
     if (!res.ok) {
-      let msg = res.status + ' ' + res.statusText;
-      try { const j = await res.json(); if (j.message) msg = j.message + '（HTTP ' + res.status + '）'; } catch (e) {}
-      const err = new Error(msg); err.status = res.status; throw err;
+      const err = new Error('HTTP ' + res.status);
+      err.status = res.status;
+      throw err;
     }
-    const text = await res.text();
-    return text ? JSON.parse(text) : null;
+    return res.json();
   }
 
-  function xhrSend(method, path, body, onProgress) {
+  function postJSON(url, body, onProgress) {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
-      xhr.open(method, API + path, true);
-      xhr.setRequestHeader('Accept', 'application/vnd.github+json');
-      xhr.setRequestHeader('X-GitHub-Api-Version', '2022-11-28');
-      if (cfg.token) xhr.setRequestHeader('Authorization', 'Bearer ' + cfg.token);
-      if (body) xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.open('POST', url, true);
+      xhr.setRequestHeader('Content-Type', 'application/json');
       if (onProgress) {
         xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(e.loaded / e.total); };
       }
       xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          let data = null;
-          try { data = xhr.responseText ? JSON.parse(xhr.responseText) : null; } catch (e) {}
-          resolve(data);
-        } else {
-          let msg = xhr.status + ' ' + xhr.statusText;
-          try {
-            const j = JSON.parse(xhr.responseText);
-            if (j.message) msg = j.message + '（HTTP ' + xhr.status + '）';
-          } catch (e) {}
-          const err = new Error(msg); err.status = xhr.status; reject(err);
-        }
+        let data = null;
+        try { data = xhr.responseText ? JSON.parse(xhr.responseText) : null; } catch (e) {}
+        if (xhr.status >= 200 && xhr.status < 300) return resolve(data);
+        const msg = (data && (data.error || data.message)) || ('HTTP ' + xhr.status);
+        const err = new Error(msg); err.status = xhr.status; reject(err);
       };
-      xhr.onerror = () => reject(new Error('网络错误：无法连接到 GitHub'));
+      xhr.onerror = () => reject(new Error('网络错误：无法连接上传后端'));
       xhr.ontimeout = () => reject(new Error('请求超时'));
-      xhr.send(body ? JSON.stringify(body) : null);
+      xhr.send(JSON.stringify(body));
     });
   }
 
-  function fileToBase64(file) {
-    return new Promise((resolve, reject) => {
-      const r = new FileReader();
-      r.onload = () => {
-        const s = String(r.result);
-        const i = s.indexOf(',');
-        resolve(i >= 0 ? s.slice(i + 1) : s);
-      };
-      r.onerror = () => reject(r.error || new Error('读取文件失败'));
-      r.readAsDataURL(file);
-    });
-  }
-
-  function base64ToBytes(b64) {
-    const bin = atob(b64.replace(/\s/g, ''));
-    const len = bin.length;
-    const out = new Uint8Array(len);
-    for (let i = 0; i < len; i++) out[i] = bin.charCodeAt(i);
-    return out;
-  }
-
-  // ---------- 状态 ----------
-  function setNumbering() {
-    $('numUpload').textContent = setupVisible ? '2' : '1';
-    $('numFiles').textContent = setupVisible ? '3' : '2';
-  }
-
-  function showSetup(show) {
-    setupVisible = show;
-    $('setupCard').hidden = !show;
-    $('connectedBar').hidden = show;
-    $('btnForget').hidden = !isConfigured();
-    setNumbering();
-    updateHeader();
-  }
-
-  function updateHeader() {
-    const label = cfg.owner && cfg.repo
-      ? cfg.owner + '/' + cfg.repo + (connected ? ' · ' + cfg.branch : '')
-      : '未连接';
-    $('repoLabel').textContent = label;
-    $('statusDot').className = 'dot ' + (connected ? 'on' : 'off');
-    $('connectedLabel').textContent = '已连接 ' + cfg.owner + '/' + cfg.repo + ' · ' + cfg.branch;
-    $('repoLink').href = cfg.owner && cfg.repo
-      ? 'https://github.com/' + cfg.owner + '/' + cfg.repo
-      : '#';
-  }
-
-  async function verifyAndApply(showToast) {
-    cfg.owner = $('fOwner').value.trim();
-    cfg.repo = $('fRepo').value.trim();
-    cfg.branch = ($('fBranch').value.trim() || 'main');
-    cfg.token = $('fToken').value.trim();
-
-    if (!cfg.owner || !cfg.repo) {
-      toast('请填写仓库所有者和仓库名称', 'err');
-      return false;
+  // ---------- 列表 ----------
+  async function listDir(path) {
+    if (ready) {
+      const url = workerBase() + '/list?path=' + encodeURIComponent(path || '');
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
     }
-    if (!cfg.token) {
-      toast('请填写访问令牌', 'err');
-      return false;
-    }
-
-    $('connState').textContent = '验证中…';
-    try {
-      const repo = await apiGet('/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo));
-      if (!$('fBranch').value.trim() && repo.default_branch) {
-        cfg.branch = repo.default_branch;
-        $('fBranch').value = cfg.branch;
-      }
-      // 验证令牌对目标仓库有写权限
-      const me = await apiGet('/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo));
-      if (!me.permissions || !me.permissions.push) {
-        throw new Error('该令牌没有这个仓库的写入权限');
-      }
-      saveSettings();
-      connected = true;
-      $('connState').textContent = '已连接';
-      showSetup(false);
-      if (showToast) toast('设置完成，之后打开直接用', 'ok');
-      return true;
-    } catch (e) {
-      connected = false;
-      $('connState').textContent = '连接失败';
-      toast('连接失败：' + e.message, 'err');
-      return false;
-    }
-  }
-
-  // ---------- 上传 ----------
-  const queue = [];
-  let running = false;
-
-  function renderQueue() {
-    const box = $('queue');
-    if (!queue.length) { box.innerHTML = ''; return; }
-    box.innerHTML = queue.map((it) => {
-      const cls = it.status === 'ok' ? 'ok' : it.status === 'err' ? 'err' : it.status === 'run' ? 'run' : '';
-      const label = it.status === 'ok' ? '完成'
-        : it.status === 'err' ? '失败'
-        : it.status === 'run' ? '上传中'
-        : it.status === 'skip' ? '已跳过' : '等待';
-      return '<div class="item">' +
-        '<span class="' + (it.status === 'run' ? 'spin' : '') + '"></span>' +
-        '<div class="grow">' +
-          '<div class="fname">' + esc(it.path) + '</div>' +
-          '<div class="fmeta">' + fmtSize(it.file.size) +
-            (it.error ? ' · <span style="color:var(--err)">' + esc(it.error) + '</span>' : '') +
-          '</div>' +
-          (it.status === 'run' ? '<div class="bar"><i style="width:' + (it.progress * 100).toFixed(0) + '%"></i></div>' : '') +
-        '</div>' +
-        '<span class="badge ' + cls + '">' + label + '</span>' +
-      '</div>';
-    }).join('');
-  }
-
-  function addFiles(fileList) {
-    const folder = $('fFolder').value.trim().replace(/^\/+|\/+$/g, '');
-    let added = 0;
-    for (const file of Array.from(fileList)) {
-      if (file.size > MAX_FILE) {
-        toast('「' + file.name + '」超过 100 MB，无法上传', 'err');
-        continue;
-      }
-      const rel = file.webkitRelativePath || file.name;
-      const path = (folder ? folder + '/' : '') + rel;
-      queue.push({ file, path, status: 'wait', progress: 0, error: '' });
-      added++;
-    }
-    renderQueue();
-    if (added) runQueue();
-  }
-
-  async function runQueue() {
-    if (running) return;
-    if (!isConfigured() && !connected) {
-      toast('请先在「一次性设置」里保存令牌', 'err');
-      showSetup(true);
-      return;
-    }
-    running = true;
-    try {
-      while (true) {
-        const next = queue.find((it) => it.status === 'wait');
-        if (!next) break;
-        await uploadOne(next);
-      }
-    } finally {
-      running = false;
-    }
-    const okCount = queue.filter((i) => i.status === 'ok').length;
-    if (okCount) {
-      toast('已上传 ' + okCount + ' 个文件', 'ok');
-      refreshFiles();
-    }
-  }
-
-  async function uploadOne(item) {
-    item.status = 'run';
-    item.progress = 0;
-    renderQueue();
-    try {
-      if (item.file.size > WARN_FILE) toast('「' + item.file.name + '」较大，上传可能需要一些时间');
-      const b64 = await fileToBase64(item.file);
-
-      let sha = null;
-      try {
-        const existing = await apiGet(contentsUrl(item.path));
-        if (existing && !Array.isArray(existing) && existing.sha) sha = existing.sha;
-      } catch (e) {
-        if (e.status !== 404) throw e;
-      }
-
-      if (sha && !$('fOverwrite').checked) {
-        item.status = 'skip';
-        item.error = '已存在同名文件';
-        renderQueue();
-        return;
-      }
-
-      const body = { message: 'upload: ' + item.path, content: b64, branch: cfg.branch };
-      if (sha) body.sha = sha;
-
-      await xhrSend('PUT', contentsUrl(item.path, false), body, (p) => {
-        item.progress = p;
-        renderQueue();
-      });
-
-      item.status = 'ok';
-      item.progress = 1;
-      item.error = '';
-      renderQueue();
-    } catch (e) {
-      item.status = 'err';
-      item.error = e.message;
-      renderQueue();
-    }
-  }
-
-  // ---------- 文件浏览 ----------
-  function renderPathbar() {
-    const parts = currentPath.split('/').filter(Boolean);
-    let html = '<span class="crumb" data-path="">根目录</span>';
-    let acc = '';
-    parts.forEach((p) => {
-      acc = acc ? acc + '/' + p : p;
-      html += '<span>/</span><span class="crumb" data-path="' + esc(acc) + '">' + esc(p) + '</span>';
-    });
-    $('pathbar').innerHTML = html;
-    $('pathbar').querySelectorAll('.crumb').forEach((el) => {
-      el.addEventListener('click', () => loadFiles(el.dataset.path));
-    });
+    return getJSON(API + ghPath(path));
   }
 
   async function loadFiles(path) {
     currentPath = path || '';
     renderPathbar();
-
-    if (!cfg.owner || !cfg.repo) {
-      $('fileList').innerHTML = '<div class="empty">请先完成一次性设置</div>';
-      return;
-    }
-
     $('fileList').innerHTML = '<div class="empty"><span class="spin"></span> 加载中…</div>';
+
     try {
       let data;
       try {
-        data = await apiGet(contentsUrl(currentPath));
+        data = await listDir(currentPath);
       } catch (e) {
         if (e.status === 404) {
           $('fileList').innerHTML = '<div class="empty">这里还没有文件，上传第一个吧</div>';
@@ -728,122 +451,207 @@
     }
   }
 
-  function refreshFiles() { loadFiles(currentPath); }
+  function renderPathbar() {
+    const parts = currentPath.split('/').filter(Boolean);
+    let html = '<span class="crumb" data-path="">根目录</span>';
+    let acc = '';
+    parts.forEach((p) => {
+      acc = acc ? acc + '/' + p : p;
+      html += '<span>/</span><span class="crumb" data-path="' + esc(acc) + '">' + esc(p) + '</span>';
+    });
+    $('pathbar').innerHTML = html;
+    $('pathbar').querySelectorAll('.crumb').forEach((el) => {
+      el.addEventListener('click', () => loadFiles(el.dataset.path));
+    });
+  }
 
-  async function downloadFile(path) {
-    try {
-      toast('正在准备下载…');
-      const meta = await apiGet(contentsUrl(path));
-      if (!meta || Array.isArray(meta)) throw new Error('不是有效文件');
-
-      let b64 = meta.content || '';
-      if (!b64 && meta.sha) {
-        const blobData = await apiGet('/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo) + '/git/blobs/' + meta.sha);
-        b64 = (blobData.content || '').replace(/\n/g, '');
-      }
-      if (!b64) throw new Error('无法读取文件内容（可能超过 100 MB）');
-
-      const blob = new Blob([base64ToBytes(b64)]);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = meta.name || 'download';
+  // ---------- 下载 ----------
+  function downloadFile(path) {
+    const a = document.createElement('a');
+    if (ready) {
+      a.href = workerBase() + '/download?path=' + encodeURIComponent(path);
       document.body.appendChild(a);
       a.click();
       a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 3000);
-      toast('已开始下载 ' + (meta.name || ''), 'ok');
-    } catch (e) {
-      toast('下载失败：' + e.message, 'err');
+      return;
     }
+    // 未配置后端时退化为 GitHub 原始链接
+    a.href = 'https://raw.githubusercontent.com/' + CFG.owner + '/' + CFG.repo + '/' +
+      encodeURI(CFG.branch) + '/' + encPath(path);
+    a.target = '_blank';
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   }
 
+  // ---------- 删除 ----------
   async function deleteFile(path, sha, isDir) {
-    if (!isConfigured()) { toast('删除需要访问令牌，请先完成一次性设置', 'err'); showSetup(true); return; }
+    if (!ready) { toast('上传后端未配置，无法删除', 'err'); return; }
     const target = isDir ? '文件夹「' + path + '」及其中所有文件' : '「' + path + '」';
-    if (!confirm('确定要删除 ' + target + ' 吗？此操作会直接提交到仓库，无法撤销。')) return;
+    if (!confirm('确定要删除 ' + target + ' 吗？会直接提交到仓库，无法撤销。')) return;
     try {
-      if (isDir) {
-        await deleteDir(path);
-      } else {
-        if (!sha) {
-          const meta = await apiGet(contentsUrl(path));
-          sha = meta && meta.sha;
-        }
-        await xhrSend('DELETE', contentsUrl(path, false), {
-          message: 'delete: ' + path, sha: sha, branch: cfg.branch
-        });
-      }
+      if (isDir) await deleteDir(path);
+      else await postJSON(workerBase() + '/delete', { path, sha: sha || '', password: backend.password, message: 'delete: ' + path });
       toast('已删除 ' + path, 'ok');
-      refreshFiles();
+      loadFiles(currentPath);
     } catch (e) {
       toast('删除失败：' + e.message, 'err');
     }
   }
 
   async function deleteDir(path) {
-    const list = await apiGet(contentsUrl(path));
-    if (Array.isArray(list)) {
-      for (const it of list.slice().reverse()) {
-        const childPath = path + '/' + it.name;
-        if (it.type === 'dir') await deleteDir(childPath);
-        else await xhrSend('DELETE', contentsUrl(childPath, false), {
-          message: 'delete: ' + childPath, sha: it.sha, branch: cfg.branch
-        });
+    const list = await listDir(path);
+    if (!Array.isArray(list)) return;
+    for (const it of list.slice().reverse()) {
+      const child = path + '/' + it.name;
+      if (it.type === 'dir') await deleteDir(child);
+      else await postJSON(workerBase() + '/delete', { path: child, sha: it.sha, password: backend.password });
+    }
+  }
+
+  // ---------- 上传队列 ----------
+  function renderQueue() {
+    const box = $('queue');
+    if (!queue.length) { box.innerHTML = ''; return; }
+    box.innerHTML = queue.map((it) => {
+      const cls = it.status === 'ok' ? 'ok' : it.status === 'err' ? 'err' : it.status === 'run' ? 'run' : '';
+      const label = it.status === 'ok' ? '完成'
+        : it.status === 'err' ? '失败'
+        : it.status === 'run' ? '上传中'
+        : it.status === 'skip' ? '已跳过' : '等待';
+      return '<div class="item">' +
+        '<span class="' + (it.status === 'run' ? 'spin' : '') + '"></span>' +
+        '<div class="grow">' +
+          '<div class="fname">' + esc(it.path) + '</div>' +
+          '<div class="fmeta">' + fmtSize(it.size) +
+            (it.error ? ' · <span style="color:var(--err)">' + esc(it.error) + '</span>' : '') +
+          '</div>' +
+          (it.status === 'run' ? '<div class="bar"><i style="width:' + (it.progress * 100).toFixed(0) + '%"></i></div>' : '') +
+        '</div>' +
+        '<span class="badge ' + cls + '">' + label + '</span>' +
+      '</div>';
+    }).join('');
+  }
+
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => {
+        const s = String(r.result);
+        const i = s.indexOf(',');
+        resolve(i >= 0 ? s.slice(i + 1) : s);
+      };
+      r.onerror = () => reject(r.error || new Error('读取文件失败'));
+      r.readAsDataURL(file);
+    });
+  }
+
+  function addFiles(fileList) {
+    if (!ready) { toast('上传后端未配置，暂时无法上传', 'err'); return; }
+    const folder = $('fFolder').value.trim().replace(/^\/+|\/+$/g, '');
+    let added = 0;
+    for (const file of Array.from(fileList)) {
+      if (file.size > MAX_FILE) {
+        toast('「' + file.name + '」超过 100 MB，无法上传', 'err');
+        continue;
       }
+      const rel = file.webkitRelativePath || file.name;
+      const path = (folder ? folder + '/' : '') + rel;
+      queue.push({ file, path, size: file.size, status: 'wait', progress: 0, error: '' });
+      added++;
+    }
+    renderQueue();
+    if (added) runQueue();
+  }
+
+  async function runQueue() {
+    if (running) return;
+    running = true;
+    try {
+      while (true) {
+        const next = queue.find((it) => it.status === 'wait');
+        if (!next) break;
+        await uploadOne(next);
+      }
+    } finally {
+      running = false;
+    }
+    const okCount = queue.filter((i) => i.status === 'ok').length;
+    if (okCount) {
+      toast('已上传 ' + okCount + ' 个文件', 'ok');
+      loadFiles(currentPath);
+    }
+  }
+
+  async function uploadOne(item) {
+    item.status = 'run';
+    item.progress = 0;
+    renderQueue();
+    try {
+      if (item.size > WARN_FILE) toast('「' + item.file.name + '」较大，上传可能需要一些时间');
+
+      // 覆盖检查：未开启覆盖时先探测是否已存在
+      if (!$('fOverwrite').checked) {
+        try {
+          const list = await listDir(currentPath);
+          const name = item.path.split('/').pop();
+          const exist = Array.isArray(list) && list.some((x) => x.name === name);
+          if (exist) {
+            item.status = 'skip';
+            item.error = '已存在同名文件';
+            renderQueue();
+            return;
+          }
+        } catch (e) { /* 忽略探测失败 */ }
+      }
+
+      const b64 = await fileToBase64(item.file);
+      await postJSON(workerBase() + '/upload', {
+        path: item.path,
+        content: b64,
+        password: backend.password,
+        message: 'upload: ' + item.path,
+      }, (p) => {
+        item.progress = p;
+        renderQueue();
+      });
+
+      item.status = 'ok';
+      item.progress = 1;
+      item.error = '';
+      renderQueue();
+    } catch (e) {
+      item.status = 'err';
+      item.error = e.message;
+      renderQueue();
     }
   }
 
   // ---------- 事件 ----------
   function bind() {
-    $('btnSave').addEventListener('click', async () => {
-      if (await verifyAndApply(true)) loadFiles(currentPath);
-    });
-
-    $('fToken').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') $('btnSave').click();
-    });
-
-    $('btnHelp').addEventListener('click', () => {
-      window.open('https://github.com/settings/tokens/new?scopes=repo&description=file-cloud-uploader', '_blank', 'noopener');
-      toast('勾选 repo 权限 → 生成 → 复制令牌粘贴到上面');
-    });
-
-    $('btnOpenSetup').addEventListener('click', () => {
-      $('fOwner').value = cfg.owner;
-      $('fRepo').value = cfg.repo;
-      $('fBranch').value = cfg.branch;
-      $('fToken').value = cfg.token;
-      $('connState').textContent = '已连接';
-      showSetup(true);
-    });
-
-    $('btnForget').addEventListener('click', () => {
-      if (!confirm('清除本机保存的令牌和仓库设置？')) return;
-      try { localStorage.removeItem(LS_KEY); } catch (e) {}
-      cfg.token = '';
-      connected = false;
-      $('fToken').value = '';
-      $('connState').textContent = '未连接';
-      toast('已清除');
-      showSetup(true);
+    $('btnReload').addEventListener('click', async () => {
+      const ok = await loadBackendConfig();
+      toast(ok ? '后端已就绪' : '仍未读到 backend.json 里的 workerUrl', ok ? 'ok' : 'err');
+      if (ok) loadFiles(currentPath);
     });
 
     const drop = $('drop');
-    $('btnPickFiles').addEventListener('click', () => $('fileInput').click());
-    drop.addEventListener('click', () => $('fileInput').click());
-    $('btnPickFolder').addEventListener('click', () => $('folderInput').click());
+    $('btnPickFiles').addEventListener('click', () => ready && $('fileInput').click());
+    $('btnPickFolder').addEventListener('click', () => ready && $('folderInput').click());
+    drop.addEventListener('click', () => ready && $('fileInput').click());
 
     $('fileInput').addEventListener('change', (e) => { addFiles(e.target.files); e.target.value = ''; });
     $('folderInput').addEventListener('change', (e) => { addFiles(e.target.files); e.target.value = ''; });
 
     ['dragenter', 'dragover'].forEach((ev) => {
-      drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('over'); });
+      drop.addEventListener(ev, (e) => { e.preventDefault(); if (ready) drop.classList.add('over'); });
     });
     ['dragleave', 'drop'].forEach((ev) => {
       drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove('over'); });
     });
     drop.addEventListener('drop', (e) => {
+      if (!ready) { toast('上传后端未配置，暂时无法上传', 'err'); return; }
       const files = e.dataTransfer && e.dataTransfer.files;
       if (files && files.length) addFiles(files);
     });
@@ -856,49 +664,17 @@
       }
       renderQueue();
     });
-
-    $('btnRefresh').addEventListener('click', refreshFiles);
+    $('btnRefresh').addEventListener('click', () => loadFiles(currentPath));
   }
 
   // ---------- 启动 ----------
-   async function init() {
-    loadSettings();
-
-    if (!cfg.owner || !cfg.repo) {
-      cfg.owner = 'polytrack114514';
-      cfg.repo = 'file-cloud-storage';
-      cfg.branch = 'main';
-    }
-
-    $('fOwner').value = cfg.owner;
-    $('fRepo').value = cfg.repo;
-    $('fBranch').value = cfg.branch;
-    $('fToken').value = cfg.token;
-
+  async function init() {
+    $('repoLink').href = 'https://github.com/' + CFG.owner + '/' + CFG.repo;
+    $('repoLabel').textContent = CFG.owner + '/' + CFG.repo;
     bind();
     renderPathbar();
-    updateHeader();
-
-    if (isConfigured()) {
-      showSetup(false);
-      try {
-        await apiGet('/user');
-        await apiGet('/repos/' + encodeURIComponent(cfg.owner) + '/' + encodeURIComponent(cfg.repo));
-        connected = true;
-        updateHeader();
-      } catch (e) {
-        connected = false;
-        showSetup(true);
-        $('connState').textContent = '令牌已失效，请重新填写';
-        toast('保存的令牌已失效或没权限，请重新设置', 'err');
-        return;
-      }
-      loadFiles('');
-    } else {
-      showSetup(true);
-      $('connState').textContent = '未连接';
-      loadFiles('');
-    }
+    await loadBackendConfig();
+    loadFiles('');
   }
 
   document.addEventListener('DOMContentLoaded', init);
