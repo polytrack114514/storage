@@ -40,7 +40,7 @@ GitHub 仓库 polytrack114514/file-cloud-storage
 ## 说明
 
 - 本仓库是**公开仓库**，上传的文件任何人都能看到，请勿存放敏感内容
-- 单文件最大 100 MB
+- 单文件最大 50 MB
 - 如果不想让陌生人随意上传，在 Worker 里设置 `UPLOAD_PASSWORD`，并把同样的口令填进 `backend.json` 的 `password` 字段
 - 适合文档、图片、代码等小文件，不适合当网盘存放大量大文件
 
