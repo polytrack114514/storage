@@ -1,10 +1,10 @@
-# file-cloud-storage
+# storage
 
 云端文件中转站 —— 打开网页拖拽上传，任何设备随时下载，**无需注册、无需令牌**。
 
 ## 在线地址
 
-**https://polytrack114514.github.io/file-cloud-storage/**
+**https://polytrack114514.github.io/storage/**
 
 ## 怎么用
 
@@ -24,7 +24,7 @@
 Cloudflare Pages 后端  https://file-cloud-share.pages.dev
         │  携带 GitHub 令牌
         ▼
-GitHub 仓库 polytrack114514/file-cloud-storage
+GitHub 仓库 polytrack114514/storage
 ```
 
 - 前端：本仓库 `index.html`，由 GitHub Pages 托管
@@ -40,7 +40,8 @@ GitHub 仓库 polytrack114514/file-cloud-storage
 ## 说明
 
 - 本仓库是**公开仓库**，上传的文件任何人都能看到，请勿存放敏感内容
-- 单文件最大 50 MB
+- 单文件最大 100 MB
+- `backend.json`、`index.html`、`README.md` 为基础文件，页面上标记为「不可删除」且不提供删除按钮
 - 如果不想让陌生人随意上传，在 Worker 里设置 `UPLOAD_PASSWORD`，并把同样的口令填进 `backend.json` 的 `password` 字段
 - 适合文档、图片、代码等小文件，不适合当网盘存放大量大文件
 
