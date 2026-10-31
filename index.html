@@ -640,6 +640,17 @@
     try {
       if (item.size > WARN_FILE) toast('「' + item.file.name + '」较大，上传可能需要一些时间');
 
+      // 不允许覆盖：目标位置已存在同名文件时直接跳过
+      try {
+        const list = await listDir(currentPath);
+        if (Array.isArray(list) && list.some((x) => x.path === item.path)) {
+          item.status = 'skip';
+          item.error = '已存在同名文件，不能覆盖';
+          renderQueue();
+          return;
+        }
+      } catch (e) { /* 探测失败时交给后端拦截 */ }
+
       const b64 = await fileToBase64(item.file);
       await postJSON(workerBase() + '/upload', {
         path: item.path,
