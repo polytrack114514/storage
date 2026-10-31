@@ -35,14 +35,32 @@ GitHub 仓库 polytrack114514/storage
 { "workerUrl": "https://file-cloud-share.pages.dev", "password": "" }
 ```
 
-后端已部署完成，日常使用无需再做任何配置。若日后需要重新部署，把 `worker.js` 作为 `_worker.js` 上传到 Cloudflare Pages 项目，并配置环境变量 `GH_TOKEN`、`REPO_OWNER`、`REPO_NAME`、`BRANCH` 即可。
+后端已部署完成，日常使用无需再做任何配置。若日后需要重新部署，把 `worker.js` 作为 `_worker.js` 上传到 Cloudflare Pages 项目，并配置环境变量即可。当前值：
+
+| 变量 | 值 |
+| --- | --- |
+| `GH_TOKEN` | 加密变量，GitHub 令牌（不对外暴露） |
+| `REPO_OWNER` | `polytrack114514` |
+| `REPO_NAME` | `storage` |
+| `BRANCH` | `main` |
+| `ALLOW_ORIGIN` | `*` |
+
+## 保护机制
+
+`backend.json`、`index.html`、`README.md` 这三个基础文件受**后端强制保护**：
+
+- 任何覆盖或删除请求，后端一律返回 `403`，即使绕过网页直接调用接口也无效
+- 上传同名文件会被后端拒绝并提示，不会破坏站点
+- 页面上额外标记为「不可删除」并隐藏删除按钮，上传时自动跳过
+
+这三层中，前两端（后端拒绝）才是真正的保护，前端标记只是让人看得见。
 
 ## 说明
 
 - 本仓库是**公开仓库**，上传的文件任何人都能看到，请勿存放敏感内容
-- 单文件最大 100 MB
-- `backend.json`、`index.html`、`README.md` 为基础文件：页面标记为「不可删除」、不提供删除按钮，上传同名文件也会被自动跳过
-- 如果不想让陌生人随意上传，在 Worker 里设置 `UPLOAD_PASSWORD`，并把同样的口令填进 `backend.json` 的 `password` 字段
+- 单文件最大 100 MB，前端与后端双重校验，后端超限直接返回 `413`
+- 子目录中的同名文件不受保护（只有仓库根目录的三个基础文件受保护）
+- 如果不想让陌生人随意上传，可在后端设置 `UPLOAD_PASSWORD`，并把同样的口令填进 `backend.json` 的 `password` 字段。注意 `backend.json` 本身公开可读，这个口令只能算轻度门槛
 - 适合文档、图片、代码等小文件，不适合当网盘存放大量大文件
 
 ## 仓库文件
