@@ -560,11 +560,15 @@
     const folder = $('fFolder').value.trim().replace(/^\/+|\/+$/g, '');
     let added = 0;
     for (const file of Array.from(fileList)) {
+      const rel = file.webkitRelativePath || file.name;
+      if (!folder && rel.indexOf('/') < 0 && PROTECTED.indexOf(rel) >= 0) {
+        toast('「' + rel + '」是基础文件，已跳过', 'err');
+        continue;
+      }
       if (file.size > MAX_FILE) {
         toast('「' + file.name + '」超过 100 MB，无法上传', 'err');
         continue;
       }
-      const rel = file.webkitRelativePath || file.name;
       const path = (folder ? folder + '/' : '') + rel;
       queue.push({ file, path, size: file.size, status: 'wait', progress: 0, error: '' });
       added++;
