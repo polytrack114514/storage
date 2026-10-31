@@ -13,27 +13,29 @@
 3. 文件会直接提交到本仓库，并出现在「云端文件」列表里
 4. 换任何设备打开同一网址，都能看到并下载
 
-支持多文件、整个文件夹上传，可指定目标子目录，带进度条和逐文件状态提示。全部文件操作都通过 Cloudflare Worker 中转，网页本身不保存、不接触任何 GitHub 令牌。
+支持多文件、整个文件夹上传，可指定目标子目录，带进度条和逐文件状态提示。全部文件操作都通过云端中转服务完成，网页本身不保存、不接触任何 GitHub 令牌。
 
-## 后端部署（仅仓库所有者需要做一次）
+## 架构
 
-上传能力依赖一个 Cloudflare Worker，它替你持有 GitHub 令牌。部署步骤见仓库根目录的 `worker.js` 文件开头注释，摘要如下：
-
-1. 注册免费 Cloudflare 账号，进入 Workers & Pages，新建一个 Worker
-2. 把 `worker.js` 的全部内容粘贴进去并部署
-3. 在 Worker 的 Settings → Variables 添加：
-   - `GH_TOKEN`（加密变量）：有本仓库 Contents 读写权限的 GitHub 令牌
-   - `REPO_OWNER`：`polytrack114514`
-   - `REPO_NAME`：`file-cloud-storage`
-   - `BRANCH`：`main`
-   - 可选 `UPLOAD_PASSWORD`：设了之后网页端必须带上同样口令才能上传
-4. 复制 Worker 地址（形如 `https://xxx.workers.dev`），填进本仓库的 `backend.json`：
-
-```json
-{ "workerUrl": "https://xxx.workers.dev", "password": "" }
+```
+浏览器（GitHub Pages 页面）
+        │  POST /upload  /delete    GET /list  /download
+        ▼
+Cloudflare Pages 后端  https://file-cloud-share.pages.dev
+        │  携带 GitHub 令牌
+        ▼
+GitHub 仓库 polytrack114514/file-cloud-storage
 ```
 
-保存提交后，刷新网页即可上传。
+- 前端：本仓库 `index.html`，由 GitHub Pages 托管
+- 后端：Cloudflare Pages 上的 `_worker.js`，持有 GitHub 令牌，对外提供上传/删除/列表/下载接口
+- 前端通过仓库里的 `backend.json` 得知后端地址，当前为：
+
+```json
+{ "workerUrl": "https://file-cloud-share.pages.dev", "password": "" }
+```
+
+后端已部署完成，日常使用无需再做任何配置。若日后需要重新部署，把 `worker.js` 作为 `_worker.js` 上传到 Cloudflare Pages 项目，并配置环境变量 `GH_TOKEN`、`REPO_OWNER`、`REPO_NAME`、`BRANCH` 即可。
 
 ## 说明
 
@@ -48,5 +50,5 @@
 | --- | --- |
 | `index.html` | 上传器页面（GitHub Pages 托管） |
 | `backend.json` | 上传后端地址配置 |
-| `worker.js` | Cloudflare Worker 源码，令牌保存在它里面 |
+| `worker.js` | 后端源码（令牌保存于云端环境变量，不在代码里） |
 | `README.md` | 本说明 |
