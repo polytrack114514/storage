@@ -160,6 +160,7 @@
   .fmeta { color: var(--muted); font-size: 11.5px; }
   .lock { color: #ff5d5d; font-size: 11.5px; font-weight: 600; margin-left: 6px; white-space: nowrap; }
   .actions { display: flex; gap: 6px; flex: none; }
+  .actions a.btn { text-decoration: none; color: var(--text); display: inline-flex; align-items: center; }
   .empty { text-align: center; padding: 34px 10px; color: var(--muted); font-size: 13px; }
 
   .toast {
@@ -184,7 +185,8 @@
   @media (max-width: 620px) {
     .wrap { padding: 18px 14px 70px; }
     .card { padding: 16px; }
-    .actions { display: none; }
+    .actions { gap: 4px; }
+    .actions .btn { padding: 4px 7px; font-size: 11px; }
   }
 </style>
 </head>
@@ -239,7 +241,7 @@
     <div class="row" style="margin-top:12px">
       <button class="btn sm" id="btnPickFiles">选择文件</button>
       <button class="btn sm" id="btnPickFolder">选择整个文件夹</button>
-      <label class="checkbox" style="margin-left:auto"><input type="checkbox" id="fOverwrite" checked /> 覆盖同名文件</label>
+      <span class="checkbox" style="margin-left:auto">同名文件不会被覆盖</span>
       <button class="btn sm ghost" id="btnClearQueue">清空列表</button>
     </div>
 
@@ -308,6 +310,25 @@
     if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
     if (n < 1024 * 1024 * 1024) return (n / 1024 / 1024).toFixed(1) + ' MB';
     return (n / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+  }
+
+  function fmtTime(iso) {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    const p = (n) => (n < 10 ? '0' + n : '' + n);
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) +
+      ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+
+  function siteBase() {
+    if (location.protocol === 'http:' || location.protocol === 'https:') {
+      return location.origin + location.pathname.replace(/[^\/]*$/, '');
+    }
+    return 'https://polytrack114514.github.io/storage/';
+  }
+
+  function jumpUrl(p) {
+    return siteBase() + p.split('/').map(encodeURIComponent).join('/');
   }
 
   function esc(s) {
@@ -415,9 +436,24 @@
         $('fileList').innerHTML = '<div class="empty">这里还没有文件，上传第一个吧</div>';
         return;
       }
+      const pinned = (it) => {
+        if (currentPath || it.type === 'dir') return -1;
+        return PROTECTED.indexOf(it.name);
+      };
       items.sort((a, b) => {
-        if (a.type === b.type) return a.name.localeCompare(b.name);
-        return a.type === 'dir' ? -1 : 1;
+        const pa = pinned(a), pb = pinned(b);
+        if (pa >= 0 || pb >= 0) {
+          if (pa < 0) return 1;
+          if (pb < 0) return -1;
+          return pa - pb;
+        }
+        const ad = a.type === 'dir', bd = b.type === 'dir';
+        if (ad !== bd) return ad ? -1 : 1;
+        if (ad) return a.name.localeCompare(b.name);
+        const ta = a.uploadedAt ? Date.parse(a.uploadedAt) : 0;
+        const tb = b.uploadedAt ? Date.parse(b.uploadedAt) : 0;
+        if (ta !== tb) return tb - ta;
+        return a.name.localeCompare(b.name);
       });
 
       $('fileList').innerHTML = items.map((it) => {
@@ -432,9 +468,10 @@
           '<div class="grow">' +
             '<div class="fname ' + (isDir ? 'dir' : '') + '" data-path="' + esc(p) + '" data-dir="' + isDir + '">' + esc(it.name) +
               (locked ? '<span class="lock">【基础文件，不可删除】</span>' : '') + '</div>' +
-            '<div class="fmeta">' + (isDir ? '文件夹' : fmtSize(it.size)) + '</div>' +
+            '<div class="fmeta">' + (isDir ? '文件夹' : fmtSize(it.size) + (it.uploadedAt ? ' · 上传于 ' + fmtTime(it.uploadedAt) : '')) + '</div>' +
           '</div>' +
           '<div class="actions">' +
+            (isDir ? '' : '<a class="btn sm" href="' + esc(jumpUrl(p)) + '" target="_blank" rel="noopener">跳转访问</a>') +
             (isDir ? '' : '<button class="btn sm" data-dl="' + esc(p) + '">下载</button>') +
             (locked ? '' : '<button class="btn sm danger" data-del="' + esc(p) + '" data-sha="' + (it.sha || '') + '" data-dir="' + isDir + '">删除</button>') +
           '</div>' +
@@ -602,21 +639,6 @@
     renderQueue();
     try {
       if (item.size > WARN_FILE) toast('「' + item.file.name + '」较大，上传可能需要一些时间');
-
-      // 覆盖检查：未开启覆盖时先探测是否已存在
-      if (!$('fOverwrite').checked) {
-        try {
-          const list = await listDir(currentPath);
-          const name = item.path.split('/').pop();
-          const exist = Array.isArray(list) && list.some((x) => x.name === name);
-          if (exist) {
-            item.status = 'skip';
-            item.error = '已存在同名文件';
-            renderQueue();
-            return;
-          }
-        } catch (e) { /* 忽略探测失败 */ }
-      }
 
       const b64 = await fileToBase64(item.file);
       await postJSON(workerBase() + '/upload', {
