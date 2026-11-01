@@ -267,6 +267,7 @@
     <div class="card-head">
       <div class="card-title">云端文件<span class="stat" id="statLine"></span></div>
       <div class="row">
+        <button class="btn sm ghost" id="btnTrash">回收站</button>
         <button class="btn sm ghost" id="btnRefresh">刷新</button>
       </div>
     </div>
@@ -275,6 +276,23 @@
     <div class="filters" id="filters"></div>
     <div class="files" id="fileList">
       <div class="empty">正在加载…</div>
+    </div>
+  </section>
+
+  <!-- 回收站 -->
+  <section class="card" id="trashCard" hidden>
+    <div class="card-head">
+      <div class="card-title">回收站<span class="stat" id="trashStat"></span></div>
+      <div class="row">
+        <button class="btn sm danger" id="btnTrashEmpty">清空回收站</button>
+        <button class="btn sm ghost" id="btnTrashClose">收起</button>
+      </div>
+    </div>
+    <div class="files" id="trashList">
+      <div class="empty">正在加载…</div>
+    </div>
+    <div class="hint">
+      <span>删除的文件会先移到仓库的 <code>.trash</code> 目录，可以点「恢复」原路放回；只有「彻底删除」才会真正移除。</span>
     </div>
   </section>
 
@@ -559,8 +577,11 @@
             '<div class="fmeta">' + (isDir ? '文件夹' : fmtSize(it.size) + (it.uploadedAt ? ' · 上传于 ' + fmtTime(it.uploadedAt) : '')) + '</div>' +
           '</div>' +
           '<div class="actions">' +
-            (isDir ? '' : '<a class="btn sm" href="' + esc(jumpUrl(p)) + '" target="_blank" rel="noopener">跳转访问</a>') +
-            (isDir ? '' : '<button class="btn sm" data-dl="' + esc(p) + '">下载</button>') +
+            (isDir
+              ? '<button class="btn sm" data-zip="' + esc(p) + '">打包下载</button>'
+              : '<button class="btn sm" data-copy="' + esc(p) + '">复制直链</button>' +
+                '<a class="btn sm" href="' + esc(jumpUrl(p)) + '" target="_blank" rel="noopener">跳转访问</a>' +
+                '<button class="btn sm" data-dl="' + esc(p) + '">下载</button>') +
             (locked ? '' : '<button class="btn sm danger" data-del="' + esc(p) + '" data-sha="' + (it.sha || '') + '" data-dir="' + isDir + '">删除</button>') +
           '</div>' +
         '</div>';
@@ -568,6 +589,12 @@
 
       $('fileList').querySelectorAll('[data-path]').forEach((el) => {
         if (el.dataset.dir === 'true') el.addEventListener('click', () => loadFiles(el.dataset.path));
+      });
+      $('fileList').querySelectorAll('[data-copy]').forEach((el) => {
+        el.addEventListener('click', () => copyLink(el.dataset.copy));
+      });
+      $('fileList').querySelectorAll('[data-zip]').forEach((el) => {
+        el.addEventListener('click', () => downloadZip(el.dataset.zip));
       });
       $('fileList').querySelectorAll('[data-dl]').forEach((el) => {
         el.addEventListener('click', () => downloadFile(el.dataset.dl));
@@ -624,6 +651,159 @@
     a.remove();
   }
 
+  // ---------- 复制直链 ----------
+  async function copyLink(path) {
+    const url = jumpUrl(path);
+    const ok = await copyText(url);
+    toast(ok ? '直链已复制：' + url : '复制失败，请手动复制：' + url, ok ? 'ok' : 'err');
+  }
+
+  function copyText(text) {
+    return new Promise((resolve) => {
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text)
+          .then(() => resolve(true))
+          .catch(() => resolve(fallbackCopy(text)));
+        return;
+      }
+      resolve(fallbackCopy(text));
+    });
+  }
+
+  function fallbackCopy(text) {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.top = '-1000px';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      ta.remove();
+      return ok;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // ---------- 打包下载整个文件夹 ----------
+  async function downloadZip(path) {
+    if (!ready) { toast('上传后端未配置，无法打包下载', 'err'); return; }
+    const label = path ? path.split('/').pop() : CFG.repo;
+    toast('正在打包「' + label + '」，稍等一下…');
+    try {
+      const res = await fetch(workerBase() + '/zip?path=' + encodeURIComponent(path || ''), { cache: 'no-store' });
+      if (!res.ok) {
+        let msg = 'HTTP ' + res.status;
+        try { const j = await res.json(); if (j && j.error) msg = j.error; } catch (e) {}
+        throw new Error(msg);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = label + '.zip';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+      toast('打包完成，已开始下载', 'ok');
+    } catch (e) {
+      toast('打包失败：' + e.message, 'err');
+    }
+  }
+
+  // ---------- 回收站 ----------
+  const FILE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+
+  async function loadTrash() {
+    $('trashCard').hidden = false;
+    if (!ready) {
+      $('trashList').innerHTML = '<div class="empty">上传后端未配置，无法读取回收站</div>';
+      return;
+    }
+    $('trashList').innerHTML = '<div class="empty"><span class="spin"></span> 加载中…</div>';
+    try {
+      const res = await fetch(workerBase() + '/trash', { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const items = await res.json();
+      if (!Array.isArray(items) || !items.length) {
+        $('trashStat').textContent = '';
+        $('trashList').innerHTML = '<div class="empty">回收站是空的</div>';
+        return;
+      }
+      const bytes = items.reduce((sum, it) => sum + (it.size || 0), 0);
+      $('trashStat').textContent = '共 ' + items.length + ' 个文件 · ' + fmtSize(bytes);
+      $('trashList').innerHTML = items.map((it) =>
+        '<div class="frow">' +
+          '<span class="ficon">' + FILE_ICON + '</span>' +
+          '<div class="grow">' +
+            '<div class="fname">' + esc(it.path) + '</div>' +
+            '<div class="fmeta">' + fmtSize(it.size) +
+              (it.deletedAt ? ' · 删除于 ' + fmtTime(it.deletedAt) : '') + '</div>' +
+          '</div>' +
+          '<div class="actions">' +
+            '<button class="btn sm" data-restore="' + esc(it.path) + '">恢复</button>' +
+            '<button class="btn sm danger" data-purge="' + esc(it.path) + '">彻底删除</button>' +
+          '</div>' +
+        '</div>').join('');
+
+      $('trashList').querySelectorAll('[data-restore]').forEach((el) => {
+        el.addEventListener('click', () => restoreTrash(el.dataset.restore));
+      });
+      $('trashList').querySelectorAll('[data-purge]').forEach((el) => {
+        el.addEventListener('click', () => purgeTrash(el.dataset.purge));
+      });
+    } catch (e) {
+      $('trashStat').textContent = '';
+      $('trashList').innerHTML = '<div class="empty">加载失败：' + esc(e.message) + '</div>';
+    }
+  }
+
+  async function restoreTrash(path) {
+    const pass = getPass();
+    if (!pass) return;
+    try {
+      await postJSON(workerBase() + '/trash', { action: 'restore', path, password: pass });
+      toast('已恢复「' + path + '」', 'ok');
+      loadTrash();
+      loadFiles(currentPath);
+      loadStats();
+    } catch (e) {
+      toast('恢复失败：' + e.message, 'err');
+    }
+  }
+
+  async function purgeTrash(path) {
+    const pass = getPass();
+    if (!pass) return;
+    if (!confirm('彻底删除「' + path + '」？删除后无法恢复。')) return;
+    try {
+      await postJSON(workerBase() + '/trash', { action: 'purge', path, password: pass });
+      toast('已彻底删除「' + path + '」', 'ok');
+      loadTrash();
+      loadStats();
+    } catch (e) {
+      toast('删除失败：' + e.message, 'err');
+    }
+  }
+
+  async function emptyTrash() {
+    const pass = getPass();
+    if (!pass) return;
+    if (!confirm('清空回收站？其中所有文件都会被彻底删除，无法恢复。')) return;
+    try {
+      const r = await postJSON(workerBase() + '/trash', { action: 'empty', password: pass });
+      toast('已清空回收站（' + ((r && r.removed) || 0) + ' 个文件）', 'ok');
+      loadTrash();
+      loadStats();
+    } catch (e) {
+      toast('清空失败：' + e.message, 'err');
+    }
+  }
+
   // ---------- 删除 ----------
   async function deleteFile(path, sha, isDir) {
     if (!ready) { toast('上传后端未配置，无法删除', 'err'); return; }
@@ -634,13 +814,14 @@
     const target = isDir ? '文件夹「' + path + '」及其中所有文件' : '「' + path + '」';
     const pass = getPass();
     if (!pass) return;
-    if (!confirm('确定要删除 ' + target + ' 吗？会直接提交到仓库，无法撤销。')) return;
+    if (!confirm('确定要删除 ' + target + ' 吗？文件会移入回收站，可以再恢复。')) return;
     try {
       if (isDir) await deleteDir(path, pass);
       else await postJSON(workerBase() + '/delete', { path, sha: sha || '', password: pass, message: 'delete: ' + path });
-      toast('已删除 ' + path, 'ok');
+      toast('已移入回收站：' + path, 'ok');
       loadFiles(currentPath);
       loadStats();
+      if (!$('trashCard').hidden) loadTrash();
     } catch (e) {
       toast('删除失败：' + e.message, 'err');
     }
@@ -821,6 +1002,12 @@
       renderQueue();
     });
     $('btnRefresh').addEventListener('click', () => { loadFiles(currentPath); loadStats(); });
+    $('btnTrash').addEventListener('click', () => {
+      if (!$('trashCard').hidden) { $('trashCard').hidden = true; return; }
+      loadTrash();
+    });
+    $('btnTrashClose').addEventListener('click', () => { $('trashCard').hidden = true; });
+    $('btnTrashEmpty').addEventListener('click', emptyTrash);
     $('fPass').addEventListener('input', (e) => {
       try { localStorage.setItem(PASS_KEY, e.target.value); } catch (err) {}
     });
