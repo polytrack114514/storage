@@ -21,8 +21,108 @@ const json = (obj, status, cors) =>
 /** 仓库根目录的基础文件：禁止被覆盖或删除，防止站点被破坏 */
 const PROTECTED = ['backend.json', 'index.html', 'README.md', 'worker.js'];
 const MAX_BYTES = 100 * 1024 * 1024;
+const ZIP_MAX = 80 * 1024 * 1024;
 
 const isProtected = (p) => !String(p || '').includes('/') && PROTECTED.indexOf(p) >= 0;
+
+/** 回收站目录：删除的文件先挪到这里，可以再恢复 */
+const TRASH_DIR = '.trash';
+
+/** ---------- ZIP 打包（STORE 无压缩） ---------- */
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let i = 0; i < 256; i++) {
+    let c = i;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+    t[i] = c >>> 0;
+  }
+  return t;
+})();
+
+const crc32 = (bytes) => {
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+};
+
+const b64ToBytes = (b64) => {
+  const bin = atob(String(b64 || '').replace(/\s/g, ''));
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+};
+
+/** entries: [{ name, data: Uint8Array }] */
+const buildZip = (entries) => {
+  const enc = new TextEncoder();
+  const d = new Date();
+  const time = (d.getHours() << 11) | (d.getMinutes() << 5) | Math.floor(d.getSeconds() / 2);
+  const date = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+
+  const chunks = [];
+  const central = [];
+  let offset = 0;
+
+  entries.forEach((e) => {
+    const nameBytes = enc.encode(e.name);
+    const crc = crc32(e.data);
+    const size = e.data.length;
+
+    const lh = new Uint8Array(30 + nameBytes.length);
+    const lv = new DataView(lh.buffer);
+    lv.setUint32(0, 0x04034b50, true);
+    lv.setUint16(4, 20, true);
+    lv.setUint16(6, 0x0800, true);
+    lv.setUint16(8, 0, true);
+    lv.setUint16(10, time, true);
+    lv.setUint16(12, date, true);
+    lv.setUint32(14, crc, true);
+    lv.setUint32(18, size, true);
+    lv.setUint32(22, size, true);
+    lv.setUint16(26, nameBytes.length, true);
+    lv.setUint16(28, 0, true);
+    lh.set(nameBytes, 30);
+
+    const ch = new Uint8Array(46 + nameBytes.length);
+    const cv = new DataView(ch.buffer);
+    cv.setUint32(0, 0x02014b50, true);
+    cv.setUint16(4, 20, true);
+    cv.setUint16(6, 20, true);
+    cv.setUint16(8, 0x0800, true);
+    cv.setUint16(10, 0, true);
+    cv.setUint16(12, time, true);
+    cv.setUint16(14, date, true);
+    cv.setUint32(16, crc, true);
+    cv.setUint32(20, size, true);
+    cv.setUint32(24, size, true);
+    cv.setUint16(28, nameBytes.length, true);
+    cv.setUint32(42, offset, true);
+    ch.set(nameBytes, 46);
+
+    chunks.push(lh, e.data);
+    central.push(ch);
+    offset += lh.length + size;
+  });
+
+  const centralStart = offset;
+  let centralSize = 0;
+  central.forEach((c) => { chunks.push(c); centralSize += c.length; });
+
+  const eocd = new Uint8Array(22);
+  const ev = new DataView(eocd.buffer);
+  ev.setUint32(0, 0x06054b50, true);
+  ev.setUint16(8, entries.length, true);
+  ev.setUint16(10, entries.length, true);
+  ev.setUint32(12, centralSize, true);
+  ev.setUint32(16, centralStart, true);
+  chunks.push(eocd);
+
+  const total = chunks.reduce((s, c) => s + c.length, 0);
+  const out = new Uint8Array(total);
+  let pos = 0;
+  chunks.forEach((c) => { out.set(c, pos); pos += c.length; });
+  return out;
+};
 
 /** 记录每个文件的上传时间，供列表排序与展示使用 */
 const META_FILE = '.meta.json';
@@ -119,6 +219,51 @@ export default {
       });
     };
 
+    /** 读取文件内容（大文件走 blobs 接口），返回 { b64, sha } 或 null */
+    const readFileB64 = async (path) => {
+      const r = await gh(contentsPath(path));
+      if (!r.ok) return null;
+      const j = await r.json();
+      if (Array.isArray(j)) return null;
+      if (j.content) return { b64: String(j.content).replace(/\s/g, ''), sha: j.sha };
+      const br = await gh('/repos/' + owner + '/' + repo + '/git/blobs/' + j.sha);
+      if (!br.ok) return null;
+      const bj = await br.json();
+      if (!bj.content) return null;
+      return { b64: String(bj.content).replace(/\s/g, ''), sha: j.sha };
+    };
+
+    const putFile = async (path, b64, message) => {
+      const head = await gh(contentsPath(path));
+      let sha = null;
+      if (head.ok) {
+        const j = await head.json();
+        if (j && j.sha) sha = j.sha;
+      }
+      const payload = { message, content: b64, branch };
+      if (sha) payload.sha = sha;
+      return gh(contentsPath(path, false), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    };
+
+    const removeFile = async (path, sha) => {
+      let s = sha;
+      if (!s) {
+        const h = await gh(contentsPath(path));
+        if (!h.ok) return h;
+        const j = await h.json();
+        s = j && j.sha;
+      }
+      return gh(contentsPath(path, false), {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: 'delete: ' + path, sha: s, branch }),
+      });
+    };
+
     const url = new URL(request.url);
     const route = url.pathname.replace(/\/+$/, '') || '/';
 
@@ -133,7 +278,7 @@ export default {
 
         const meta = (await readMeta()).data;
         const withTime = data
-          .filter((it) => it.name !== META_FILE)
+          .filter((it) => it.name !== META_FILE && it.path !== TRASH_DIR)
           .map((it) => Object.assign({}, it, { uploadedAt: meta[it.path] || null }));
         return json(withTime, 200, cors);
       }
@@ -145,9 +290,74 @@ export default {
         );
         if (!r.ok) return json({ error: '读取仓库信息失败' }, r.status, cors);
         const j = await r.json();
-        const blobs = (j.tree || []).filter((it) => it.type === 'blob' && it.path !== META_FILE);
+        const blobs = (j.tree || []).filter(
+          (it) => it.type === 'blob' && it.path !== META_FILE && it.path.indexOf(TRASH_DIR + '/') !== 0
+        );
         const bytes = blobs.reduce((sum, it) => sum + (it.size || 0), 0);
         return json({ files: blobs.length, bytes, passwordRequired: !!env.UPLOAD_PASSWORD }, 200, cors);
+      }
+
+      // ---------- 回收站列表 ----------
+      if (request.method === 'GET' && route === '/trash') {
+        const r = await gh(
+          '/repos/' + owner + '/' + repo + '/git/trees/' + encodeURIComponent(branch) + '?recursive=1'
+        );
+        if (!r.ok) return json({ error: '读取回收站失败' }, r.status, cors);
+        const j = await r.json();
+        const meta = (await readMeta()).data;
+        const items = (j.tree || [])
+          .filter((it) => it.type === 'blob' && it.path.indexOf(TRASH_DIR + '/') === 0)
+          .map((it) => ({
+            path: it.path.slice(TRASH_DIR.length + 1),
+            size: it.size || 0,
+            deletedAt: meta[it.path] || null,
+          }));
+        return json(items, 200, cors);
+      }
+
+      // ---------- 目录打包下载 ----------
+      if (request.method === 'GET' && route === '/zip') {
+        const dir = (url.searchParams.get('path') || '').replace(/^\/+|\/+$/g, '');
+        const r = await gh(
+          '/repos/' + owner + '/' + repo + '/git/trees/' + encodeURIComponent(branch) + '?recursive=1'
+        );
+        if (!r.ok) return json({ error: '读取目录失败' }, r.status, cors);
+        const j = await r.json();
+        const prefix = dir ? dir + '/' : '';
+        const files = (j.tree || []).filter(
+          (it) =>
+            it.type === 'blob' &&
+            it.path.indexOf(prefix) === 0 &&
+            it.path !== META_FILE &&
+            it.path.indexOf(TRASH_DIR + '/') !== 0 &&
+            it.path !== TRASH_DIR
+        );
+        if (!files.length) return json({ error: '目录为空或不存在' }, 404, cors);
+
+        const total = files.reduce((sum, f) => sum + (f.size || 0), 0);
+        if (total > ZIP_MAX) return json({ error: '该目录超过 80 MB，请分批下载' }, 413, cors);
+
+        const entries = [];
+        for (const f of files) {
+          const src = await readFileB64(f.path);
+          if (!src) continue;
+          entries.push({
+            name: f.path.slice(prefix.length) || f.path.split('/').pop(),
+            data: b64ToBytes(src.b64),
+          });
+        }
+        if (!entries.length) return json({ error: '没有可打包的文件' }, 404, cors);
+
+        const zip = buildZip(entries);
+        const name = (dir ? dir.split('/').pop() : repo) + '.zip';
+        return new Response(zip, {
+          status: 200,
+          headers: {
+            ...cors,
+            'Content-Type': 'application/zip',
+            'Content-Disposition': "attachment; filename*=UTF-8''" + encodeURIComponent(name),
+          },
+        });
       }
 
       // ---------- 下载文件 ----------
@@ -245,7 +455,7 @@ export default {
         return json(data, out.status, cors);
       }
 
-      // ---------- 删除 ----------
+      // ---------- 删除（移入回收站） ----------
       if (route === '/delete') {
         const path = body.path;
         if (!path) return json({ error: '缺少 path' }, 400, cors);
@@ -253,28 +463,80 @@ export default {
           return json({ error: '「' + path + '」是基础文件，不允许删除', protected: true }, 403, cors);
         }
 
-        let sha = body.sha;
-        if (!sha) {
-          const head = await gh(contentsPath(path));
-          if (!head.ok) return json({ error: '文件不存在' }, head.status, cors);
-          const meta = await head.json();
-          sha = meta && meta.sha;
+        const src = await readFileB64(path);
+        if (!src) return json({ error: '文件不存在（文件夹请逐个删除）' }, 404, cors);
+
+        const trashPath = TRASH_DIR + '/' + path;
+        const moved = await putFile(trashPath, src.b64, 'trash: ' + path);
+        if (!moved.ok) return json({ error: '移入回收站失败，文件未被删除' }, 500, cors);
+
+        const del = await removeFile(path, body.sha || src.sha);
+        if (!del.ok) return json({ error: '原文件删除失败，回收站已保留副本' }, del.status, cors);
+
+        await writeMeta({ [path]: null, [trashPath]: new Date().toISOString() });
+        return json({ ok: true, trashedTo: trashPath }, 200, cors);
+      }
+
+      // ---------- 回收站操作：恢复 / 彻底删除 / 清空 ----------
+      if (route === '/trash') {
+        if (body.action === 'restore') {
+          const path = body.path;
+          if (!path) return json({ error: '缺少 path' }, 400, cors);
+          if (isProtected(path)) {
+            return json({ error: '「' + path + '」是基础文件，无需恢复', protected: true }, 403, cors);
+          }
+
+          const exists = await gh(contentsPath(path));
+          if (exists.ok) {
+            return json({ error: '「' + path + '」已存在，请先删除或改名后再恢复' }, 409, cors);
+          }
+
+          const trashPath = TRASH_DIR + '/' + path;
+          const src = await readFileB64(trashPath);
+          if (!src) return json({ error: '回收站中没有该文件' }, 404, cors);
+
+          const back = await putFile(path, src.b64, 'restore: ' + path);
+          if (!back.ok) return json({ error: '恢复失败' }, 500, cors);
+          await removeFile(trashPath, src.sha);
+
+          const meta = (await readMeta()).data;
+          await writeMeta({ [trashPath]: null, [path]: meta[path] || new Date().toISOString() });
+          return json({ ok: true, restored: path }, 200, cors);
         }
 
-        const out = await gh(contentsPath(path, false), {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            message: body.message || 'delete: ' + path,
-            sha,
-            branch,
-          }),
-        });
-        const text = await out.text();
-        let data;
-        try { data = JSON.parse(text); } catch (e) { data = { error: text.slice(0, 300) }; }
-        if (out.ok) await writeMeta({ [path]: null });
-        return json(data, out.status, cors);
+        if (body.action === 'purge') {
+          const path = body.path;
+          if (!path) return json({ error: '缺少 path' }, 400, cors);
+          const trashPath = TRASH_DIR + '/' + path;
+          const out = await removeFile(trashPath);
+          if (!out.ok) return json({ error: '回收站中没有该文件' }, out.status, cors);
+          await writeMeta({ [trashPath]: null });
+          return json({ ok: true }, 200, cors);
+        }
+
+        if (body.action === 'empty') {
+          const r = await gh(
+            '/repos/' + owner + '/' + repo + '/git/trees/' + encodeURIComponent(branch) + '?recursive=1'
+          );
+          if (!r.ok) return json({ error: '读取回收站失败' }, r.status, cors);
+          const j = await r.json();
+          const files = (j.tree || []).filter(
+            (it) => it.type === 'blob' && it.path.indexOf(TRASH_DIR + '/') === 0
+          );
+          const patch = {};
+          let n = 0;
+          for (const f of files) {
+            const out = await removeFile(f.path);
+            if (out.ok) {
+              n++;
+              patch[f.path] = null;
+            }
+          }
+          if (Object.keys(patch).length) await writeMeta(patch);
+          return json({ ok: true, removed: n }, 200, cors);
+        }
+
+        return json({ error: '未知操作' }, 400, cors);
       }
 
       return json({ error: '未知接口' }, 404, cors);
