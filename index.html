@@ -20,6 +20,27 @@
     --err: #f0626b;
     --radius: 14px;
   }
+  :root[data-theme="light"] {
+    --bg: #f2f4f8;
+    --surface: #ffffff;
+    --surface-2: #f1f3f9;
+    --border: #dfe3ec;
+    --border-strong: #c7cedb;
+    --text: #1b2030;
+    --muted: #66708a;
+    --accent: #2f6bff;
+    --accent-soft: rgba(47, 107, 255, .1);
+    --ok: #1f9d63;
+    --warn: #c07f18;
+    --err: #d64550;
+  }
+  :root[data-theme="light"] body {
+    background: radial-gradient(1200px 600px at 15% -10%, #e6efff 0%, transparent 60%), var(--bg);
+  }
+  :root[data-theme="light"] .btn:hover { background: #eef2fb; }
+  :root[data-theme="light"] .toast { background: #ffffff; box-shadow: 0 16px 40px -12px rgba(20, 30, 60, .18); }
+  :root[data-theme="light"] .pv-body { background: #f6f8fc; }
+  :root[data-theme="light"] .pv-body iframe { border: 1px solid var(--border); }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   [hidden] { display: none !important; }
@@ -195,6 +216,15 @@
   .gbar { margin-bottom: 10px; }
   .gbar input[type="text"] { width: 100%; }
 
+  .pickbox { display: flex; align-items: center; flex: none; }
+  .pick { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; }
+  .selbar {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    border: 1px solid var(--border); background: var(--surface-2);
+    border-radius: 10px; padding: 8px 12px; margin-bottom: 10px; font-size: 12.5px;
+  }
+  .selbar .grow { color: var(--muted); }
+
   .preview {
     position: fixed; inset: 0; background: rgba(6, 8, 12, .88);
     display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 50;
@@ -228,6 +258,9 @@
     .pv-body iframe { height: 70vh; }
   }
 </style>
+<script>
+  try { if (localStorage.getItem('fc_theme') === 'light') document.documentElement.setAttribute('data-theme', 'light'); } catch (e) {}
+</script>
 </head>
 <body>
 <div class="wrap">
@@ -242,10 +275,13 @@
         <div class="sub">拖拽上传，云端保存，随时下载 · 无需登录</div>
       </div>
     </div>
-    <a class="repo-chip" id="repoLink" href="#" target="_blank" rel="noopener">
-      <span class="dot off" id="statusDot"></span>
-      <span id="repoLabel">文件云盘</span>
-    </a>
+    <div class="row">
+      <button class="btn sm ghost" id="btnTheme">亮色</button>
+      <a class="repo-chip" id="repoLink" href="#" target="_blank" rel="noopener">
+        <span class="dot off" id="statusDot"></span>
+        <span id="repoLabel">文件云盘</span>
+      </a>
+    </div>
   </header>
 
   <!-- 后端未配置提示 -->
@@ -308,6 +344,13 @@
     </div>
     <div class="filters" id="filters"></div>
     <div class="filters" id="timeFilters"></div>
+    <div class="selbar" id="selbar" hidden>
+      <span class="grow" id="selCount">已选 0 项</span>
+      <button class="btn sm" id="btnSelAll">全选当前目录</button>
+      <button class="btn sm" id="btnSelZip">打包下载</button>
+      <button class="btn sm danger" id="btnSelDel">删除选中</button>
+      <button class="btn sm ghost" id="btnSelClear">取消选择</button>
+    </div>
     <div class="files" id="fileList">
       <div class="empty">正在加载…</div>
     </div>
@@ -374,6 +417,7 @@
   let fileFilter = 'all';
   let fileQuery = '';
   let fileTime = 'all';
+  const picked = new Set();
   const queue = [];
 
   // ---------- 口令 ----------
@@ -577,6 +621,8 @@
     currentPath = path || '';
     // 上传目标默认跟随当前浏览的目录
     if (changed) $('fFolder').value = currentPath;
+    picked.clear();
+    updateSelbar();
     renderPathbar();
     $('fileList').innerHTML = '<div class="empty"><span class="spin"></span> 加载中…</div>';
 
@@ -685,6 +731,8 @@
         const pv = !isDir && previewKind(it.name)
           ? '<button class="btn sm" data-pv="' + esc(p) + '">预览</button>' : '';
         return '<div class="frow">' +
+          '<span class="pickbox"><input type="checkbox" class="pick" data-pick="' + esc(p) + '"' +
+            (picked.has(p) ? ' checked' : '') + ' /></span>' +
           '<span class="ficon">' + icon + '</span>' +
           '<div class="grow">' +
             '<div class="fname ' + (isDir ? 'dir' : '') + '" data-path="' + esc(p) + '" data-dir="' + isDir + '">' + esc(it.name) +
@@ -698,7 +746,8 @@
                 '<button class="btn sm" data-copy="' + esc(p) + '">复制直链</button>' +
                 '<a class="btn sm" href="' + esc(jumpUrl(p)) + '" target="_blank" rel="noopener">跳转访问</a>' +
                 '<button class="btn sm" data-dl="' + esc(p) + '">下载</button>') +
-            (locked ? '' : '<button class="btn sm danger" data-del="' + esc(p) + '" data-sha="' + (it.sha || '') + '" data-dir="' + isDir + '">删除</button>') +
+            (locked ? '' : '<button class="btn sm ghost" data-move="' + esc(p) + '">移动</button>' +
+              '<button class="btn sm danger" data-del="' + esc(p) + '" data-sha="' + (it.sha || '') + '" data-dir="' + isDir + '">删除</button>') +
           '</div>' +
         '</div>';
       }).join('');
@@ -721,6 +770,109 @@
       $('fileList').querySelectorAll('[data-del]').forEach((el) => {
         el.addEventListener('click', () => deleteFile(el.dataset.del, el.dataset.sha, el.dataset.dir === 'true'));
       });
+      $('fileList').querySelectorAll('.pick').forEach((el) => {
+        el.addEventListener('change', () => {
+          if (el.checked) picked.add(el.dataset.pick); else picked.delete(el.dataset.pick);
+          updateSelbar();
+        });
+      });
+      $('fileList').querySelectorAll('[data-move]').forEach((el) => {
+        el.addEventListener('click', () => moveItem(el.dataset.move));
+      });
+  }
+
+  // ---------- 多选 ----------
+  function updateSelbar() {
+    $('selbar').hidden = picked.size === 0;
+    $('selCount').textContent = '已选 ' + picked.size + ' 项';
+    $('btnSelZip').disabled = picked.size === 0;
+    $('btnSelDel').disabled = picked.size === 0;
+  }
+
+  function selectAllVisible() {
+    $('fileList').querySelectorAll('.pick').forEach((el) => {
+      el.checked = true;
+      picked.add(el.dataset.pick);
+    });
+    updateSelbar();
+  }
+
+  function clearPick() {
+    picked.clear();
+    $('fileList').querySelectorAll('.pick').forEach((el) => { el.checked = false; });
+    updateSelbar();
+  }
+
+  function itemOfPath(p) {
+    return fileItems.find((it) => (currentPath ? currentPath + '/' + it.name : it.name) === p);
+  }
+
+  async function zipSelected() {
+    const all = Array.from(picked);
+    if (!all.length) return;
+    const hasDir = all.some((p) => { const it = itemOfPath(p); return it && it.type === 'dir'; });
+    if (hasDir) { toast('文件夹请用行内的「打包下载」单独打包', 'err'); return; }
+    await downloadZip(currentPath, all.map((p) => p.split('/').pop()));
+  }
+
+  async function deleteSelected() {
+    if (!ready) { toast('上传后端未配置，无法删除', 'err'); return; }
+    const pass = getPass();
+    if (!pass) return;
+    const all = Array.from(picked);
+    if (!all.length) return;
+    if (!confirm('删除选中的 ' + all.length + ' 项？文件会移入回收站，可以再恢复。')) return;
+    for (const p of all) {
+      const it = itemOfPath(p);
+      const isDir = it && it.type === 'dir';
+      try {
+        if (isDir) await deleteDir(p, pass);
+        else await postJSON(workerBase() + '/delete', {
+          path: p, sha: (it && it.sha) || '', password: pass, message: 'delete: ' + p,
+        });
+      } catch (e) {
+        toast('删除「' + p + '」失败：' + e.message, 'err');
+      }
+    }
+    clearPick();
+    toast('已删除 ' + all.length + ' 项', 'ok');
+    loadFiles(currentPath);
+    loadStats();
+    if (!$('trashCard').hidden) loadTrash();
+  }
+
+  async function moveItem(path) {
+    const pass = getPass();
+    if (!pass) return;
+    const to = prompt('移动 / 改名：输入新的完整路径\n（改名就只改最后一段，移动就改目录部分）', path);
+    if (to === null) return;
+    const dest = String(to).trim().replace(/^\/+|\/+$/g, '');
+    if (!dest || dest === path) return;
+    try {
+      await postJSON(workerBase() + '/move', { from: path, to: dest, password: pass });
+      toast('已移动到 ' + dest, 'ok');
+      clearPick();
+      loadFiles(currentPath);
+      loadStats();
+    } catch (e) {
+      toast('移动失败：' + e.message, 'err');
+    }
+  }
+
+  // ---------- 主题 ----------
+  const THEME_KEY = 'fc_theme';
+
+  function applyTheme(t) {
+    const light = t === 'light';
+    if (light) document.documentElement.setAttribute('data-theme', 'light');
+    else document.documentElement.removeAttribute('data-theme');
+    $('btnTheme').textContent = light ? '暗色' : '亮色';
+  }
+
+  function toggleTheme() {
+    const light = document.documentElement.getAttribute('data-theme') !== 'light';
+    try { localStorage.setItem(THEME_KEY, light ? 'light' : 'dark'); } catch (e) {}
+    applyTheme(light ? 'light' : 'dark');
   }
 
   // ---------- 新建文件夹 ----------
@@ -861,12 +1013,15 @@
   }
 
   // ---------- 打包下载整个文件夹 ----------
-  async function downloadZip(path) {
+  async function downloadZip(path, names) {
     if (!ready) { toast('上传后端未配置，无法打包下载', 'err'); return; }
-    const label = path ? path.split('/').pop() : CFG.repo;
+    const picked = Array.isArray(names) ? names : [];
+    const label = picked.length ? '选中的文件' : (path ? path.split('/').pop() : CFG.repo);
     toast('正在打包「' + label + '」，稍等一下…');
     try {
-      const res = await fetch(workerBase() + '/zip?path=' + encodeURIComponent(path || ''), { cache: 'no-store' });
+      let u = workerBase() + '/zip?path=' + encodeURIComponent(path || '');
+      if (picked.length) u += '&names=' + encodeURIComponent(picked.join(','));
+      const res = await fetch(u, { cache: 'no-store' });
       if (!res.ok) {
         let msg = 'HTTP ' + res.status;
         try { const j = await res.json(); if (j && j.error) msg = j.error; } catch (e) {}
@@ -1175,6 +1330,11 @@
     });
     $('btnRefresh').addEventListener('click', () => { loadFiles(currentPath); loadStats(); });
     $('btnMkdir').addEventListener('click', mkdir);
+    $('btnSelAll').addEventListener('click', selectAllVisible);
+    $('btnSelZip').addEventListener('click', zipSelected);
+    $('btnSelDel').addEventListener('click', deleteSelected);
+    $('btnSelClear').addEventListener('click', clearPick);
+    $('btnTheme').addEventListener('click', toggleTheme);
     $('fSearch').addEventListener('input', (e) => { fileQuery = e.target.value; renderFiles(); });
     $('pvClose').addEventListener('click', closePreview);
     $('preview').addEventListener('click', (e) => { if (e.target === $('preview')) closePreview(); });
@@ -1197,6 +1357,7 @@
     $('repoLink').href = 'https://github.com/' + CFG.owner + '/' + CFG.repo;
     $('repoLabel').textContent = CFG.owner + '/' + CFG.repo;
     bind();
+    applyTheme((function () { try { return localStorage.getItem(THEME_KEY) || 'dark'; } catch (e) { return 'dark'; } })());
     renderPathbar();
     await loadBackendConfig();
     $('fPass').value = storedPass() || backend.password || '';
