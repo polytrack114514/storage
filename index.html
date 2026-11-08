@@ -746,7 +746,8 @@
                 '<button class="btn sm" data-copy="' + esc(p) + '">复制直链</button>' +
                 '<a class="btn sm" href="' + esc(jumpUrl(p)) + '" target="_blank" rel="noopener">跳转访问</a>' +
                 '<button class="btn sm" data-dl="' + esc(p) + '">下载</button>') +
-            (locked ? '' : '<button class="btn sm ghost" data-move="' + esc(p) + '">移动</button>' +
+            (locked ? '' : '<button class="btn sm ghost" data-rename="' + esc(p) + '">改名</button>' +
+              '<button class="btn sm ghost" data-move="' + esc(p) + '">移动</button>' +
               '<button class="btn sm danger" data-del="' + esc(p) + '" data-sha="' + (it.sha || '') + '" data-dir="' + isDir + '">删除</button>') +
           '</div>' +
         '</div>';
@@ -775,6 +776,9 @@
           if (el.checked) picked.add(el.dataset.pick); else picked.delete(el.dataset.pick);
           updateSelbar();
         });
+      });
+      $('fileList').querySelectorAll('[data-rename]').forEach((el) => {
+        el.addEventListener('click', () => renameItem(el.dataset.rename));
       });
       $('fileList').querySelectorAll('[data-move]').forEach((el) => {
         el.addEventListener('click', () => moveItem(el.dataset.move));
@@ -841,13 +845,38 @@
     if (!$('trashCard').hidden) loadTrash();
   }
 
+  async function renameItem(path) {
+    const pass = getPass();
+    if (!pass) return;
+    const name = path.split('/').pop();
+    const dir = path.slice(0, path.length - name.length);
+    const input = prompt('改名：输入新的名称（不含路径）', name);
+    if (input === null) return;
+    const newName = String(input).trim();
+    if (!newName || newName === name) return;
+    if (newName.indexOf('/') >= 0) return toast('名称不能包含 /', 'err');
+    const dest = dir + newName;
+    try {
+      await postJSON(workerBase() + '/move', { from: path, to: dest, password: pass });
+      toast('已改名为 ' + newName, 'ok');
+      clearPick();
+      loadFiles(currentPath);
+      loadStats();
+    } catch (e) {
+      toast('改名失败：' + e.message, 'err');
+    }
+  }
+
   async function moveItem(path) {
     const pass = getPass();
     if (!pass) return;
-    const to = prompt('移动 / 改名：输入新的完整路径\n（改名就只改最后一段，移动就改目录部分）', path);
-    if (to === null) return;
-    const dest = String(to).trim().replace(/^\/+|\/+$/g, '');
-    if (!dest || dest === path) return;
+    const name = path.split('/').pop();
+    const dir = path.slice(0, path.length - name.length).replace(/\/$/, '');
+    const input = prompt('移动到：输入目标文件夹（留空为根目录）', dir);
+    if (input === null) return;
+    const target = String(input).trim().replace(/^\/+|\/+$/g, '');
+    if (target === dir) return;
+    const dest = target ? target + '/' + name : name;
     try {
       await postJSON(workerBase() + '/move', { from: path, to: dest, password: pass });
       toast('已移动到 ' + dest, 'ok');
