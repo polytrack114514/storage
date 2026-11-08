@@ -278,7 +278,7 @@ export default {
 
         const meta = (await readMeta()).data;
         const withTime = data
-          .filter((it) => it.name !== META_FILE && it.path !== TRASH_DIR)
+          .filter((it) => it.name !== META_FILE && it.name !== '.keep' && it.path !== TRASH_DIR)
           .map((it) => Object.assign({}, it, { uploadedAt: meta[it.path] || null }));
         return json(withTime, 200, cors);
       }
@@ -453,6 +453,29 @@ export default {
           if (data && typeof data === 'object') data.uploadedAt = at;
         }
         return json(data, out.status, cors);
+      }
+
+      // ---------- 新建文件夹（Git 仓库没有空目录，用 .keep 占位） ----------
+      if (route === '/mkdir') {
+        const parent = String(body.path || '').replace(/^\/+|\/+$/g, '');
+        const name = String(body.name || '')
+          .replace(/[\\/]+/g, '-')
+          .replace(/[\u0000-\u001f<>:"|?*]/g, '')
+          .replace(/^\.+/, '')
+          .trim()
+          .slice(0, 60);
+        if (!name) return json({ error: '文件夹名不合法' }, 400, cors);
+
+        const dir = parent ? parent + '/' + name : name;
+        const head = await gh(contentsPath(dir));
+        if (head.ok) return json({ error: '「' + dir + '」已存在', exists: true }, 409, cors);
+
+        const out = await putFile(dir + '/.keep', b64encode('# keep\n'), 'mkdir: ' + dir);
+        if (!out.ok) {
+          const t = await out.text();
+          return json({ error: '创建文件夹失败（HTTP ' + out.status + '）', detail: t.slice(0, 200) }, out.status, cors);
+        }
+        return json({ ok: true, path: dir }, 201, cors);
       }
 
       // ---------- 删除（移入回收站） ----------
