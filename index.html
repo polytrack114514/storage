@@ -21,34 +21,6 @@
     --err: #00c97a;
     --radius: 6px;
   }
-  :root[data-theme="light"] {
-    --bg: #eef7f1;
-    --surface: #ffffff;
-    --surface-2: #e8f3ec;
-    --border: #cfe4d7;
-    --border-strong: #a9c9b7;
-    --text: #0b2117;
-    --muted: #547a63;
-    --accent: #0a8f5f;
-    --accent-2: #0b7a52;
-    --accent-soft: rgba(10, 143, 95, .12);
-    --ok: #0a9c6b;
-    --warn: #0a8f5f;
-    --err: #0b7a52;
-  }
-  :root[data-theme="light"] body {
-    background:
-      radial-gradient(1200px 600px at 12% -12%, rgba(10, 143, 95, .1) 0%, transparent 60%),
-      linear-gradient(rgba(10, 143, 95, .05) 1px, transparent 1px) 0 0 / 100% 40px,
-      linear-gradient(90deg, rgba(10, 143, 95, .05) 1px, transparent 1px) 0 0 / 40px 100%,
-      var(--bg);
-  }
-  :root[data-theme="light"] body::after { opacity: .16; }
-  :root[data-theme="light"] .card { background: #ffffff; box-shadow: 0 8px 26px -22px rgba(11, 33, 23, .35); }
-  :root[data-theme="light"] .btn:hover { background: #e7f6ee; box-shadow: none; }
-  :root[data-theme="light"] .toast { background: #ffffff; box-shadow: 0 16px 40px -18px rgba(11, 33, 23, .3); }
-  :root[data-theme="light"] .pv-body { background: #f5faf7; }
-  :root[data-theme="light"] .pv-body iframe { border: 1px solid var(--border); }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   [hidden] { display: none !important; }
@@ -261,7 +233,7 @@
   .pv-body { flex: 1; min-height: 0; overflow: auto; background: #06120c; display: flex; align-items: center; justify-content: center; padding: 8px; }
   .pv-body img { max-width: 100%; max-height: 78vh; border-radius: 8px; }
   .pv-body video { max-width: 100%; max-height: 78vh; border-radius: 8px; background: #000; }
-  .pv-body iframe { width: 100%; height: 78vh; border: 0; background: #fff; border-radius: 8px; }
+  .pv-body iframe { width: 100%; height: 78vh; border: 0; background: #05100b; border-radius: 8px; }
   .pv-body pre {
     margin: 0; padding: 16px; width: 100%; align-self: stretch; overflow: auto;
     font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12.5px;
@@ -301,9 +273,6 @@
   .toast { border-radius: 4px; }
   .pv-box { border-radius: 6px; box-shadow: 0 0 40px -18px rgba(0, 255, 156, .6); }
   .pathbar { letter-spacing: .3px; }
-  :root[data-theme="light"] .card::before, :root[data-theme="light"] .card::after { opacity: .5; }
-  :root[data-theme="light"] .frow:hover { background: #f0faf4; }
-  :root[data-theme="light"] .card-title, :root[data-theme="light"] h1 { text-shadow: none; }
 
   @media (max-width: 620px) {
     .wrap { padding: 16px 12px 64px; }
@@ -319,9 +288,6 @@
     .pv-body iframe { height: 70vh; }
   }
 </style>
-<script>
-  try { if (localStorage.getItem('fc_theme') === 'light') document.documentElement.setAttribute('data-theme', 'light'); } catch (e) {}
-</script>
 </head>
 <body>
 <div class="wrap">
@@ -337,7 +303,6 @@
       </div>
     </div>
     <div class="row">
-      <button class="btn sm ghost" id="btnTheme">亮色</button>
       <a class="repo-chip" id="repoLink" href="#" target="_blank" rel="noopener">
         <span class="dot off" id="statusDot"></span>
         <span id="repoLabel">文件云盘</span>
@@ -989,22 +954,6 @@
     });
   }
 
-  // ---------- 主题 ----------
-  const THEME_KEY = 'fc_theme';
-
-  function applyTheme(t) {
-    const light = t === 'light';
-    if (light) document.documentElement.setAttribute('data-theme', 'light');
-    else document.documentElement.removeAttribute('data-theme');
-    $('btnTheme').textContent = light ? '暗色' : '亮色';
-  }
-
-  function toggleTheme() {
-    const light = document.documentElement.getAttribute('data-theme') !== 'light';
-    try { localStorage.setItem(THEME_KEY, light ? 'light' : 'dark'); } catch (e) {}
-    applyTheme(light ? 'light' : 'dark');
-  }
-
   // ---------- 新建文件夹 ----------
   async function mkdir() {
     if (!ready) { toast('上传后端未配置，无法新建文件夹', 'err'); return; }
@@ -1464,7 +1413,6 @@
     $('btnSelZip').addEventListener('click', zipSelected);
     $('btnSelDel').addEventListener('click', deleteSelected);
     $('btnSelClear').addEventListener('click', clearPick);
-    $('btnTheme').addEventListener('click', toggleTheme);
     $('fSearch').addEventListener('input', (e) => {
       fileQuery = e.target.value;
       if (globalMode) { if (!fileQuery.trim()) exitGlobal(); return; }
@@ -1495,7 +1443,6 @@
     $('repoLink').href = 'https://github.com/' + CFG.owner + '/' + CFG.repo;
     $('repoLabel').textContent = CFG.owner + '/' + CFG.repo;
     bind();
-    applyTheme((function () { try { return localStorage.getItem(THEME_KEY) || 'dark'; } catch (e) { return 'dark'; } })());
     renderPathbar();
     await loadBackendConfig();
     $('fPass').value = storedPass() || backend.password || '';
