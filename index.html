@@ -6,47 +6,65 @@
 <title>文件云盘 · GitHub 上传器</title>
 <style>
   :root {
-    --bg: #000000;
-    --surface: #000000;
-    --surface-2: #000000;
-    --border: #123320;
-    --border-strong: #1f5c3a;
-    --text: #00ff9c;
-    --muted: #4fa87a;
-    --accent: #00ff9c;
-    --accent-2: #7dffc4;
-    --accent-soft: rgba(0, 255, 156, .1);
-    --ok: #00ff9c;
-    --warn: #00ff9c;
-    --err: #00c97a;
-    --radius: 6px;
+    --bg: #0d0f14;
+    --surface: #161a22;
+    --surface-2: #1d222c;
+    --border: #2a303c;
+    --border-strong: #3a4152;
+    --text: #e8eaef;
+    --muted: #8b93a3;
+    --accent: #4f8cff;
+    --accent-soft: rgba(79, 140, 255, 0.12);
+    --ok: #35c07a;
+    --warn: #e8a33d;
+    --err: #f0626b;
+    --radius: 14px;
   }
+  :root[data-theme="light"] {
+    --bg: #f2f4f8;
+    --surface: #ffffff;
+    --surface-2: #f1f3f9;
+    --border: #dfe3ec;
+    --border-strong: #c7cedb;
+    --text: #1b2030;
+    --muted: #66708a;
+    --accent: #2f6bff;
+    --accent-soft: rgba(47, 107, 255, .1);
+    --ok: #1f9d63;
+    --warn: #c07f18;
+    --err: #d64550;
+  }
+  :root[data-theme="light"] body {
+    background: radial-gradient(1200px 600px at 15% -10%, #e6efff 0%, transparent 60%), var(--bg);
+  }
+  :root[data-theme="light"] .btn:hover { background: #eef2fb; }
+  :root[data-theme="light"] .toast { background: #ffffff; box-shadow: 0 16px 40px -12px rgba(20, 30, 60, .18); }
+  :root[data-theme="light"] .pv-body { background: #f6f8fc; }
+  :root[data-theme="light"] .pv-body iframe { border: 1px solid var(--border); }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   [hidden] { display: none !important; }
   body {
-    background: var(--bg);
+    background: radial-gradient(1200px 600px at 15% -10%, #1a2438 0%, transparent 60%), var(--bg);
     color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
       "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
     font-size: 14px; line-height: 1.6; min-height: 100vh;
     -webkit-font-smoothing: antialiased;
   }
-  .wrap { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 28px 20px 80px; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 20px 80px; }
 
   header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
   .brand { display: flex; align-items: center; gap: 12px; }
   .logo {
-    width: 40px; height: 40px; border-radius: 6px; flex: none;
-    background: #000; border: 1px solid var(--accent);
+    width: 40px; height: 40px; border-radius: 11px; flex: none;
+    background: linear-gradient(140deg, #4f8cff, #7b5cff);
     display: grid; place-items: center;
+    box-shadow: 0 8px 22px -8px rgba(79, 140, 255, 0.7);
   }
-  .logo svg { width: 20px; height: 20px; fill: var(--accent); }
-  h1 {
-    font-size: 20px; font-weight: 700; margin: 0; letter-spacing: 3px; text-transform: uppercase;
-    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  }
-  .sub { color: var(--muted); font-size: 12px; margin-top: 1px; letter-spacing: .4px; }
+  .logo svg { width: 20px; height: 20px; fill: #fff; }
+  h1 { font-size: 19px; font-weight: 650; margin: 0; letter-spacing: -0.2px; }
+  .sub { color: var(--muted); font-size: 12.5px; margin-top: 1px; }
 
   .repo-chip {
     display: inline-flex; align-items: center; gap: 8px;
@@ -57,8 +75,8 @@
   }
   .repo-chip:hover { border-color: var(--accent); transform: translateY(-1px); }
   .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex: none; }
-  .dot.on { background: var(--ok); box-shadow: 0 0 0 3px rgba(0, 255, 156, .15); }
-  .dot.off { background: var(--err); box-shadow: 0 0 0 3px rgba(0, 255, 156, .1); }
+  .dot.on { background: var(--ok); box-shadow: 0 0 0 3px rgba(53, 192, 122, .15); }
+  .dot.off { background: var(--err); box-shadow: 0 0 0 3px rgba(240, 98, 107, .15); }
 
   .card {
     background: var(--surface); border: 1px solid var(--border);
@@ -69,11 +87,11 @@
 
   .banner {
     display: flex; gap: 10px; align-items: flex-start; flex-wrap: wrap;
-    background: #000; border: 1px solid var(--border-strong);
+    background: rgba(232, 163, 61, .07); border: 1px solid rgba(232, 163, 61, .28);
     border-radius: 12px; padding: 13px 15px; margin-bottom: 18px; font-size: 13px;
-    color: var(--text);
+    color: #e9c184;
   }
-  .banner b { color: var(--accent-2); }
+  .banner b { color: #f3d3a0; }
 
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
   .field { display: flex; flex-direction: column; gap: 6px; }
@@ -85,7 +103,7 @@
     outline: none; transition: border-color .16s, box-shadow .16s;
   }
   input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-  input::placeholder { color: #4f7a63; }
+  input::placeholder { color: #5c6474; }
 
   .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 7px;
@@ -93,22 +111,22 @@
     padding: 8px 15px; border-radius: 10px; font-size: 13px; font-family: inherit;
     cursor: pointer; transition: background .16s, border-color .16s, transform .1s; white-space: nowrap;
   }
-  .btn:hover { border-color: var(--accent); background: #000; }
+  .btn:hover { border-color: var(--accent); background: #202634; }
   .btn:active { transform: scale(.975); }
   .btn.ghost { background: transparent; border-color: var(--border); }
   .btn.sm { padding: 5px 10px; font-size: 12px; border-radius: 8px; }
-  .btn.danger { color: var(--accent-2); border-color: rgba(0, 255, 156, .3); }
-  .btn.danger:hover { background: #000; border-color: var(--accent); }
+  .btn.danger { color: var(--err); border-color: rgba(240, 98, 107, .35); }
+  .btn.danger:hover { background: rgba(240, 98, 107, .1); border-color: var(--err); }
 
   .drop {
     border: 1.5px dashed var(--border-strong); border-radius: 12px;
     padding: 34px 20px; text-align: center; cursor: pointer;
-    transition: border-color .18s, background .18s; background: #000;
+    transition: border-color .18s, background .18s; background: rgba(255, 255, 255, .012);
   }
-  .drop:hover { border-color: var(--accent); background: #000; }
-  .drop.over { border-color: var(--accent); background: #000; border-style: solid; }
+  .drop:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .drop.over { border-color: var(--accent); background: var(--accent-soft); border-style: solid; }
   .drop.off { opacity: .45; cursor: not-allowed; }
-  .drop.off:hover { border-color: var(--border-strong); background: #000; }
+  .drop.off:hover { border-color: var(--border-strong); background: rgba(255,255,255,.012); }
   .drop svg { width: 34px; height: 34px; stroke: var(--muted); margin-bottom: 8px; }
   .drop.over svg { stroke: var(--accent); }
   .drop-main { font-size: 14px; font-weight: 600; }
@@ -117,7 +135,7 @@
   .hint {
     display: flex; gap: 9px; align-items: flex-start;
     font-size: 12.5px; color: var(--muted); margin-top: 12px;
-    background: #000; border: 1px solid var(--border);
+    background: rgba(255,255,255,.02); border: 1px solid var(--border);
     border-radius: 10px; padding: 10px 12px;
   }
 
@@ -135,11 +153,11 @@
     font-size: 11px; padding: 2px 9px; border-radius: 999px; font-weight: 600;
     background: var(--surface); border: 1px solid var(--border); color: var(--muted); flex: none;
   }
-  .badge.ok { color: var(--accent); border-color: rgba(0,255,156,.35); background: #000; }
-  .badge.err { color: var(--accent-2); border-color: rgba(0,255,156,.25); background: #000; }
-  .badge.run { color: var(--accent); border-color: rgba(0,255,156,.4); background: #000; }
+  .badge.ok { color: var(--ok); border-color: rgba(53,192,122,.35); background: rgba(53,192,122,.1); }
+  .badge.err { color: var(--err); border-color: rgba(240,98,107,.35); background: rgba(240,98,107,.1); }
+  .badge.run { color: var(--accent); border-color: rgba(79,140,255,.4); background: var(--accent-soft); }
   .bar { height: 3px; border-radius: 3px; background: var(--border); overflow: hidden; margin-top: 6px; }
-  .bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+  .bar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #4f8cff, #7b5cff); transition: width .2s; }
 
   .pathbar {
     display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
@@ -157,7 +175,7 @@
     transition: border-color .15s, background .15s, color .15s;
   }
   .chip:hover { border-color: var(--accent); color: var(--text); }
-  .chip.on { border-color: rgba(0,255,156,.55); background: #000; color: var(--accent); font-weight: 600; }
+  .chip.on { border-color: rgba(79,140,255,.55); background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 
   .files { display: flex; flex-direction: column; gap: 6px; }
   .frow {
@@ -171,23 +189,23 @@
   .fname { font-weight: 520; font-size: 13px; word-break: break-all; }
   .frow .dir { cursor: pointer; color: var(--accent); }
   .fmeta { color: var(--muted); font-size: 11.5px; }
-  .lock { color: var(--accent-2); font-size: 11.5px; font-weight: 600; margin-left: 6px; white-space: nowrap; }
+  .lock { color: #ff5d5d; font-size: 11.5px; font-weight: 600; margin-left: 6px; white-space: nowrap; }
   .actions { display: flex; gap: 6px; flex: none; }
   .actions a.btn { text-decoration: none; color: var(--text); display: inline-flex; align-items: center; }
   .empty { text-align: center; padding: 34px 10px; color: var(--muted); font-size: 13px; }
 
   .toast {
     position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 20px);
-    background: #000; border: 1px solid var(--border-strong); color: var(--text);
+    background: #202634; border: 1px solid var(--border-strong); color: var(--text);
     padding: 10px 18px; border-radius: 10px; font-size: 13px;
     box-shadow: 0 16px 40px -12px rgba(0,0,0,.8); opacity: 0; pointer-events: none;
     transition: opacity .22s, transform .22s; z-index: 40; max-width: 88vw;
   }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
-  .toast.err { border-color: rgba(0,255,156,.5); }
-  .toast.ok { border-color: rgba(0,255,156,.8); }
+  .toast.err { border-color: rgba(240,98,107,.5); }
+  .toast.ok { border-color: rgba(53,192,122,.5); }
 
-  .spin { width: 13px; height: 13px; border-radius: 50%; border: 2px solid rgba(0,255,156,.2); border-top-color: var(--accent); animation: sp .7s linear infinite; display: inline-block; }
+  .spin { width: 13px; height: 13px; border-radius: 50%; border: 2px solid rgba(255,255,255,.2); border-top-color: var(--accent); animation: sp .7s linear infinite; display: inline-block; }
   @keyframes sp { to { transform: rotate(360deg); } }
 
   .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
@@ -197,9 +215,6 @@
 
   .gbar { margin-bottom: 10px; }
   .gbar input[type="text"] { width: 100%; }
-  .sbar { display: flex; gap: 8px; align-items: center; }
-  .sbar input[type="text"] { flex: 1; min-width: 0; }
-  .searchhint { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
 
   .pickbox { display: flex; align-items: center; flex: none; }
   .pick { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; }
@@ -211,53 +226,23 @@
   .selbar .grow { color: var(--muted); }
 
   .preview {
-    position: fixed; inset: 0; background: rgba(0, 0, 0, .92);
+    position: fixed; inset: 0; background: rgba(6, 8, 12, .88);
     display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 50;
     backdrop-filter: blur(6px);
   }
   .pv-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; max-width: 960px; width: 100%; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; }
   .pv-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
   .pv-name { font-weight: 600; font-size: 13px; word-break: break-all; flex: 1; min-width: 0; }
-  .pv-body { flex: 1; min-height: 0; overflow: auto; background: #000; display: flex; align-items: center; justify-content: center; padding: 8px; }
+  .pv-body { flex: 1; min-height: 0; overflow: auto; background: #0f1218; display: flex; align-items: center; justify-content: center; padding: 8px; }
   .pv-body img { max-width: 100%; max-height: 78vh; border-radius: 8px; }
   .pv-body video { max-width: 100%; max-height: 78vh; border-radius: 8px; background: #000; }
-  .pv-body iframe { width: 100%; height: 78vh; border: 0; background: #000; border-radius: 8px; }
+  .pv-body iframe { width: 100%; height: 78vh; border: 0; background: #fff; border-radius: 8px; }
   .pv-body pre {
     margin: 0; padding: 16px; width: 100%; align-self: stretch; overflow: auto;
     font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12.5px;
     white-space: pre-wrap; word-break: break-word; color: var(--text);
   }
   .pv-body .empty { align-self: stretch; }
-
-  /* ===== 黑绿终端风 ===== */
-  .card {
-    position: relative;
-    background: var(--surface);
-    border: 1px solid var(--border);
-  }
-  .card::before, .card::after {
-    content: ''; position: absolute; height: 2px; width: 22px; background: var(--accent); opacity: .75;
-  }
-  .card::before { left: -1px; top: -1px; }
-  .card::after { right: -1px; bottom: -1px; background: var(--accent-2); }
-  .card-title {
-    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-    letter-spacing: 1.6px; text-transform: uppercase;
-  }
-  .btn { border-radius: 4px; }
-  .btn:hover { border-color: var(--accent); background: #000; }
-  .btn.danger:hover { border-color: var(--accent-2); background: #000; }
-  input[type="text"], input[type="password"] { border-radius: 4px; background: #000; }
-  input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
-  .chip { border-radius: 3px; letter-spacing: .5px; }
-  .repo-chip { border-radius: 4px; }
-  .drop { border-color: var(--border-strong); background: #000; }
-  .frow:hover { background: #000; border-color: var(--border-strong); }
-  .selbar { border-color: var(--border-strong); background: #000; }
-  .bar > i { background: var(--accent); }
-  .toast { border-radius: 4px; }
-  .pv-box { border-radius: 6px; }
-  .pathbar { letter-spacing: .3px; }
 
   @media (max-width: 620px) {
     .wrap { padding: 16px 12px 64px; }
@@ -273,6 +258,9 @@
     .pv-body iframe { height: 70vh; }
   }
 </style>
+<script>
+  try { if (localStorage.getItem('fc_theme') === 'light') document.documentElement.setAttribute('data-theme', 'light'); } catch (e) {}
+</script>
 </head>
 <body>
 <div class="wrap">
@@ -288,6 +276,7 @@
       </div>
     </div>
     <div class="row">
+      <button class="btn sm ghost" id="btnTheme">亮色</button>
       <a class="repo-chip" id="repoLink" href="#" target="_blank" rel="noopener">
         <span class="dot off" id="statusDot"></span>
         <span id="repoLabel">文件云盘</span>
@@ -297,7 +286,7 @@
 
   <!-- 后端未配置提示 -->
   <div class="banner" id="banner" hidden>
-    <span>[ ! ]</span>
+    <span>⚠️</span>
     <span class="grow">
       <b>上传后端尚未配置</b>，现在只能浏览和下载。请先部署 Cloudflare Worker，并把地址填进仓库的
       <code>backend.json</code>。
@@ -351,10 +340,7 @@
 
     <div class="pathbar" id="pathbar"></div>
     <div class="gbar">
-      <div class="sbar">
-        <input type="text" id="fSearch" placeholder="搜索文件名，按回车搜全仓库…" autocomplete="off" />
-        <button class="btn sm" id="btnGlobal">全仓库</button>
-      </div>
+      <input type="text" id="fSearch" placeholder="搜索当前目录的文件名…" autocomplete="off" />
     </div>
     <div class="filters" id="filters"></div>
     <div class="filters" id="timeFilters"></div>
@@ -365,7 +351,6 @@
       <button class="btn sm danger" id="btnSelDel">删除选中</button>
       <button class="btn sm ghost" id="btnSelClear">取消选择</button>
     </div>
-    <div class="searchhint" id="searchHint" hidden></div>
     <div class="files" id="fileList">
       <div class="empty">正在加载…</div>
     </div>
@@ -433,7 +418,6 @@
   let fileQuery = '';
   let fileTime = 'all';
   const picked = new Set();
-  let globalMode = false;
   const queue = [];
 
   // ---------- 口令 ----------
@@ -639,8 +623,6 @@
     if (changed) $('fFolder').value = currentPath;
     picked.clear();
     updateSelbar();
-    globalMode = false;
-    $('searchHint').hidden = true;
     renderPathbar();
     $('fileList').innerHTML = '<div class="empty"><span class="spin"></span> 加载中…</div>';
 
@@ -877,66 +859,20 @@
     }
   }
 
-  // ---------- 全仓库搜索 ----------
-  function exitGlobal() {
-    if (!globalMode) return;
-    globalMode = false;
-    $('searchHint').hidden = true;
-    renderFiles();
+  // ---------- 主题 ----------
+  const THEME_KEY = 'fc_theme';
+
+  function applyTheme(t) {
+    const light = t === 'light';
+    if (light) document.documentElement.setAttribute('data-theme', 'light');
+    else document.documentElement.removeAttribute('data-theme');
+    $('btnTheme').textContent = light ? '暗色' : '亮色';
   }
 
-  async function globalSearch() {
-    if (!ready) { toast('上传后端未配置，无法全仓库搜索', 'err'); return; }
-    const q = fileQuery.trim();
-    if (!q) { exitGlobal(); return; }
-    $('searchHint').hidden = false;
-    $('searchHint').textContent = '正在全仓库搜索「' + q + '」…';
-    try {
-      const items = await getJSON(workerBase() + '/search?q=' + encodeURIComponent(q));
-      globalMode = true;
-      $('searchHint').textContent = '全仓库搜索「' + q + '」：' + items.length + ' 个结果 · 清空搜索框回到目录';
-      renderGlobal(Array.isArray(items) ? items : []);
-    } catch (e) {
-      $('searchHint').textContent = '搜索失败：' + e.message;
-    }
-  }
-
-  function renderGlobal(items) {
-    if (!items.length) {
-      $('fileList').innerHTML = '<div class="empty">全仓库没有匹配的文件</div>';
-      return;
-    }
-    $('fileList').innerHTML = items.map((it) =>
-      '<div class="frow">' +
-        '<span class="ficon">' + FILE_ICON + '</span>' +
-        '<div class="grow">' +
-          '<div class="fname">' + esc(it.name) + '</div>' +
-          '<div class="fmeta">' + esc(it.path) + ' · ' + fmtSize(it.size) +
-            (it.uploadedAt ? ' · ' + fmtTime(it.uploadedAt) : '') + '</div>' +
-        '</div>' +
-        '<div class="actions">' +
-          '<button class="btn sm" data-goloc="' + esc(it.path) + '">定位</button>' +
-          '<button class="btn sm" data-gcopy="' + esc(it.path) + '">复制直链</button>' +
-          '<button class="btn sm" data-gdl="' + esc(it.path) + '">下载</button>' +
-        '</div>' +
-      '</div>').join('');
-
-    $('fileList').querySelectorAll('[data-goloc]').forEach((el) => {
-      el.addEventListener('click', () => {
-        const p = el.dataset.goloc;
-        const dir = p.indexOf('/') >= 0 ? p.slice(0, p.lastIndexOf('/')) : '';
-        fileQuery = '';
-        $('fSearch').value = '';
-        exitGlobal();
-        loadFiles(dir);
-      });
-    });
-    $('fileList').querySelectorAll('[data-gcopy]').forEach((el) => {
-      el.addEventListener('click', () => copyLink(el.dataset.gcopy));
-    });
-    $('fileList').querySelectorAll('[data-gdl]').forEach((el) => {
-      el.addEventListener('click', () => downloadFile(el.dataset.gdl));
-    });
+  function toggleTheme() {
+    const light = document.documentElement.getAttribute('data-theme') !== 'light';
+    try { localStorage.setItem(THEME_KEY, light ? 'light' : 'dark'); } catch (e) {}
+    applyTheme(light ? 'light' : 'dark');
   }
 
   // ---------- 新建文件夹 ----------
@@ -1398,15 +1334,8 @@
     $('btnSelZip').addEventListener('click', zipSelected);
     $('btnSelDel').addEventListener('click', deleteSelected);
     $('btnSelClear').addEventListener('click', clearPick);
-    $('fSearch').addEventListener('input', (e) => {
-      fileQuery = e.target.value;
-      if (globalMode) { if (!fileQuery.trim()) exitGlobal(); return; }
-      renderFiles();
-    });
-    $('fSearch').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); globalSearch(); }
-    });
-    $('btnGlobal').addEventListener('click', globalSearch);
+    $('btnTheme').addEventListener('click', toggleTheme);
+    $('fSearch').addEventListener('input', (e) => { fileQuery = e.target.value; renderFiles(); });
     $('pvClose').addEventListener('click', closePreview);
     $('preview').addEventListener('click', (e) => { if (e.target === $('preview')) closePreview(); });
     document.addEventListener('keydown', (e) => {
@@ -1428,6 +1357,7 @@
     $('repoLink').href = 'https://github.com/' + CFG.owner + '/' + CFG.repo;
     $('repoLabel').textContent = CFG.owner + '/' + CFG.repo;
     bind();
+    applyTheme((function () { try { return localStorage.getItem(THEME_KEY) || 'dark'; } catch (e) { return 'dark'; } })());
     renderPathbar();
     await loadBackendConfig();
     $('fPass').value = storedPass() || backend.password || '';
