@@ -1,0 +1,1 @@
+powershell -ExecutionPolicy Bypass -File "%~dp0run_comment.ps1"
