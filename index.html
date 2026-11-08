@@ -4,6 +4,13 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>文件云盘 · GitHub 上传器</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%234f8cff'/%3E%3Cpath d='M4 8a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z' fill='%23fff'/%3E%3C/svg%3E" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="文件云盘" />
+<meta property="og:description" content="上传、预览、搜索、改名移动，全部通过云端中转，网页不接触 GitHub 令牌。" />
+<meta property="og:url" content="https://polytrack114514.github.io/storage/" />
+<meta property="og:image" content="https://polytrack114514.github.io/storage/og.png" />
+<meta name="twitter:card" content="summary_large_image" />
 <style>
   :root {
     --bg: #0d0f14;
@@ -257,6 +264,22 @@
   }
   .pv-body .empty { align-self: stretch; }
 
+  .md-body { width: 100%; align-self: stretch; padding: 22px 26px; font-size: 14px; line-height: 1.75; color: var(--text); text-align: left; }
+  .md-body h1, .md-body h2, .md-body h3, .md-body h4 { margin: 18px 0 10px; line-height: 1.35; }
+  .md-body h1 { font-size: 22px; }
+  .md-body h2 { font-size: 18px; }
+  .md-body h3 { font-size: 16px; }
+  .md-body p { margin: 10px 0; }
+  .md-body ul, .md-body ol { margin: 10px 0; padding-left: 24px; }
+  .md-body li { margin: 4px 0; }
+  .md-body code { background: var(--surface-2); border: 1px solid var(--border); padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
+  .md-body pre.md-code { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 14px; overflow: auto; margin: 12px 0; }
+  .md-body pre.md-code code { background: none; border: 0; padding: 0; }
+  .md-body a { color: var(--accent); }
+  .md-body img { max-width: 100%; border-radius: 8px; }
+  .md-body hr { border: 0; border-top: 1px solid var(--border); margin: 16px 0; }
+  .md-body blockquote { margin: 10px 0; padding: 6px 12px; border-left: 3px solid var(--accent); background: var(--surface-2); color: var(--muted); }
+
   .qrmodal {
     position: fixed; inset: 0; background: rgba(6, 8, 12, .88);
     display: flex; align-items: center; justify-content: center; padding: 24px; z-index: 60;
@@ -393,6 +416,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         <button class="btn sm" id="btnGlobal">全仓库</button>
       </div>
     </div>
+    <div class="filters" id="sortBar"></div>
     <div class="filters" id="filters"></div>
     <div class="filters" id="timeFilters"></div>
     <div class="selbar" id="selbar" hidden>
@@ -429,7 +453,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     <div>创作者：Shen Xiong</div>
     <div>联系作者邮箱：<a href="mailto:polytrack1@outlook.com">polytrack1@outlook.com</a> · 作者B站号：<a href="https://space.bilibili.com/3493133302106318/upload/video" target="_blank" rel="noopener">https://space.bilibili.com/3493133302106318/upload/video</a></div>
     <div>致谢 AI：TRAE CN {DeepSeek-V4.1-Flash}</div>
-    <div class="copy">© 2026 storage.</div>
+    <div class="copy">© 2026 storage. · <a href="status.html">状态页</a></div>
   </footer>
 </div>
 
@@ -474,7 +498,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
 
   const API = 'https://api.github.com';
   const MAX_FILE = 100 * 1024 * 1024;
-  const PROTECTED = ['backend.json', 'index.html', 'README.md', 'worker.js'];
+  const PROTECTED = ['backend.json', 'index.html', 'README.md', 'worker.js', 'og.png'];
   const WARN_FILE = 20 * 1024 * 1024;
 
   const $ = (id) => document.getElementById(id);
@@ -489,6 +513,14 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   let fileTime = 'all';
   let globalMode = false;
   let listView = 'list';
+  let sortKey = 'time';
+  let sortDir = 'desc';
+  let dirSizes = {};
+
+  const SORT_KEY = 'fc_sort';
+  function saveSort() {
+    try { localStorage.setItem(SORT_KEY, sortKey + '|' + sortDir); } catch (e) {}
+  }
   const picked = new Set();
   const queue = [];
 
@@ -603,6 +635,13 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     return siteBase() + p.split('/').map(encodeURIComponent).join('/');
   }
 
+  /** 图库缩略图：交给 weserv 生成小尺寸 WebP，失败时回退原图 */
+  function thumbUrl(p) {
+    const raw = rawUrl(p);
+    return 'https://images.weserv.nl/?url=' + encodeURIComponent(raw.replace(/^https?:\/\//, '')) +
+      '&w=360&h=360&fit=cover&output=webp&q=72';
+  }
+
   function esc(s) {
     return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
@@ -677,6 +716,14 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   }
 
   // ---------- 列表 ----------
+  async function loadDirSizes() {
+    if (!ready) return;
+    try {
+      const m = await getJSON(workerBase() + '/sizes');
+      if (m && typeof m === 'object') dirSizes = m;
+    } catch (e) { /* 忽略：拿不到就只显示「文件夹」 */ }
+  }
+
   async function listDir(path) {
     if (ready) {
       const url = workerBase() + '/list?path=' + encodeURIComponent(path || '');
@@ -718,31 +765,40 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         renderFiles();
         return;
       }
-      const pinned = (it) => {
-        if (currentPath || it.type === 'dir') return -1;
-        return PROTECTED.indexOf(it.name);
-      };
-      items.sort((a, b) => {
-        const pa = pinned(a), pb = pinned(b);
-        if (pa >= 0 || pb >= 0) {
-          if (pa < 0) return 1;
-          if (pb < 0) return -1;
-          return pa - pb;
-        }
-        const ad = a.type === 'dir', bd = b.type === 'dir';
-        if (ad !== bd) return ad ? -1 : 1;
-        if (ad) return a.name.localeCompare(b.name);
-        const ta = a.uploadedAt ? Date.parse(a.uploadedAt) : 0;
-        const tb = b.uploadedAt ? Date.parse(b.uploadedAt) : 0;
-        if (ta !== tb) return tb - ta;
-        return a.name.localeCompare(b.name);
-      });
-
       fileItems = items;
       renderFiles();
     } catch (e) {
       $('fileList').innerHTML = '<div class="empty">加载失败：' + esc(e.message) + '</div>';
     }
+  }
+
+  function compareItems(a, b) {
+    const pinned = (it) => {
+      if (currentPath || it.type === 'dir') return -1;
+      return PROTECTED.indexOf(it.name);
+    };
+    const pa = pinned(a), pb = pinned(b);
+    if (pa >= 0 || pb >= 0) {
+      if (pa < 0) return 1;
+      if (pb < 0) return -1;
+      return pa - pb;
+    }
+    const ad = a.type === 'dir', bd = b.type === 'dir';
+    if (ad !== bd) return ad ? -1 : 1;
+    let r = 0;
+    if (sortKey === 'name') {
+      r = a.name.localeCompare(b.name, 'zh-CN');
+    } else if (sortKey === 'size') {
+      const sa = ad ? (dirSizes[a.path] || 0) : (a.size || 0);
+      const sb = bd ? (dirSizes[b.path] || 0) : (b.size || 0);
+      r = sa - sb;
+    } else {
+      const ta = a.uploadedAt ? Date.parse(a.uploadedAt) : 0;
+      const tb = b.uploadedAt ? Date.parse(b.uploadedAt) : 0;
+      r = ta - tb;
+    }
+    if (r === 0) r = a.name.localeCompare(b.name, 'zh-CN');
+    return sortDir === 'asc' ? r : -r;
   }
 
   function matchFileTime(it) {
@@ -781,13 +837,27 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       el.addEventListener('click', () => { fileTime = el.dataset.time; renderFiles(); });
     });
 
+    const SORTS = [['name', '名称'], ['size', '大小'], ['time', '时间']];
+    $('sortBar').innerHTML = SORTS.map((o) =>
+      '<button class="chip' + (sortKey === o[0] ? ' on' : '') + '" data-sort="' + o[0] + '">' +
+        o[1] + '</button>').join('') +
+      '<button class="chip" data-sortdir="1">' + (sortDir === 'asc' ? '升序 ↑' : '降序 ↓') + '</button>';
+    $('sortBar').querySelectorAll('[data-sort]').forEach((el) => {
+      el.addEventListener('click', () => { sortKey = el.dataset.sort; saveSort(); renderFiles(); });
+    });
+    $('sortBar').querySelector('[data-sortdir]').addEventListener('click', () => {
+      sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+      saveSort();
+      renderFiles();
+    });
+
     const q = fileQuery.trim().toLowerCase();
     const items = fileItems.filter((it) => {
       if (it.type === 'dir') return !q || it.name.toLowerCase().indexOf(q) >= 0;
       return (!q || it.name.toLowerCase().indexOf(q) >= 0) &&
         (fileFilter === 'all' || catOf(it.name) === fileFilter) &&
         matchFileTime(it);
-    });
+    }).sort(compareItems);
 
     if (!items.length) {
       const narrowed = q || fileFilter !== 'all' || fileTime !== 'all';
@@ -805,7 +875,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         const locked = !isDir && !currentPath && PROTECTED.indexOf(it.name) >= 0;
         const isImg = !isDir && /\.(png|jpg|jpeg|gif|webp|svg|bmp|avif|ico)$/i.test(it.name);
         const thumb = (listView === 'gallery' && isImg)
-          ? '<img src="' + esc(jumpUrl(p)) + '" alt="" loading="lazy" />'
+          ? '<img src="' + esc(thumbUrl(p)) + '" alt="" loading="lazy" decoding="async" onerror="this.onerror=null;this.src=\'' + esc(jumpUrl(p)) + '\'" />'
           : icon;
         const pv = !isDir && previewKind(it.name)
           ? '<button class="btn sm" data-pv="' + esc(p) + '">预览</button>' : '';
@@ -816,7 +886,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
           '<div class="grow">' +
             '<div class="fname ' + (isDir ? 'dir' : '') + '" data-path="' + esc(p) + '" data-dir="' + isDir + '">' + esc(it.name) +
               (locked ? '<span class="lock">【基础文件，不可删除】</span>' : '') + '</div>' +
-            '<div class="fmeta">' + (isDir ? '文件夹' : fmtSize(it.size) + (it.uploadedAt ? ' · 上传于 ' + fmtTime(it.uploadedAt) : '')) + '</div>' +
+            '<div class="fmeta">' + (isDir ? '文件夹' + (dirSizes[p] ? ' · ' + fmtSize(dirSizes[p]) : '') : fmtSize(it.size) + (it.uploadedAt ? ' · 上传于 ' + fmtTime(it.uploadedAt) : '')) + '</div>' +
           '</div>' +
           '<div class="actions">' +
             (isDir
@@ -1122,6 +1192,66 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     $('qrModal').hidden = false;
   }
 
+  function renderMarkdown(src) {
+    const esc0 = (s) => String(s).replace(/[&<>"]/g,
+      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const inline = (s) => s
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g, '<img src="$2" alt="$1" />')
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*([^*]+)\*/g, '<em>$1</em>');
+
+    const out = [];
+    let inCode = false;
+    let codeBuf = [];
+    let inList = false;
+    let listType = '';
+
+    const closeList = () => {
+      if (inList) { out.push('</' + listType + '>'); inList = false; }
+    };
+    esc0(src).split(/\r?\n/).forEach((line) => {
+      if (/^```/.test(line)) {
+        if (!inCode) { closeList(); inCode = true; codeBuf = []; }
+        else { out.push('<pre class="md-code"><code>' + codeBuf.join('\n') + '</code></pre>'); inCode = false; }
+        return;
+      }
+      if (inCode) { codeBuf.push(line); return; }
+      if (!line.trim()) { closeList(); return; }
+      const h = line.match(/^(#{1,6})\s+(.*)$/);
+      if (h) {
+        closeList();
+        const lv = h[1].length;
+        out.push('<h' + lv + '>' + inline(h[2]) + '</h' + lv + '>');
+        return;
+      }
+      if (/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) { closeList(); out.push('<hr />'); return; }
+      if (/^\s*&gt;\s?/.test(line)) {
+        closeList();
+        out.push('<blockquote>' + inline(line.replace(/^\s*&gt;\s?/, '')) + '</blockquote>');
+        return;
+      }
+      const ul = line.match(/^\s*[-*+]\s+(.*)$/);
+      if (ul) {
+        if (!inList || listType !== 'ul') { closeList(); out.push('<ul>'); listType = 'ul'; inList = true; }
+        out.push('<li>' + inline(ul[1]) + '</li>');
+        return;
+      }
+      const ol = line.match(/^\s*\d+\.\s+(.*)$/);
+      if (ol) {
+        if (!inList || listType !== 'ol') { closeList(); out.push('<ol>'); listType = 'ol'; inList = true; }
+        out.push('<li>' + inline(ol[1]) + '</li>');
+        return;
+      }
+      closeList();
+      out.push('<p>' + inline(line) + '</p>');
+    });
+    closeList();
+    if (inCode) out.push('<pre class="md-code"><code>' + codeBuf.join('\n') + '</code></pre>');
+    return out.join('\n');
+  }
+
   function openPreview(path) {
     previewPath = path;
     const kind = previewKind(path);
@@ -1145,7 +1275,10 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
         .then((txt) => {
           const cut = txt.length > 200000 ? txt.slice(0, 200000) + '\n\n……文件较大，只显示前 200 KB' : txt;
-          body.innerHTML = '<pre>' + esc(cut) + '</pre>';
+          const isMd = /\.(md|markdown)$/i.test(path);
+          body.innerHTML = isMd
+            ? '<div class="md-body">' + renderMarkdown(cut) + '</div>'
+            : '<pre>' + esc(cut) + '</pre>';
         })
         .catch((e) => { body.innerHTML = '<div class="empty">读取失败：' + esc(e.message) + '</div>'; });
     }
@@ -1510,7 +1643,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       }
       renderQueue();
     });
-    $('btnRefresh').addEventListener('click', () => { loadFiles(currentPath); loadStats(); });
+    $('btnRefresh').addEventListener('click', async () => { await loadDirSizes(); loadFiles(currentPath); loadStats(); });
     $('btnMkdir').addEventListener('click', mkdir);
     $('btnView').addEventListener('click', () => {
       listView = listView === 'gallery' ? 'list' : 'gallery';
@@ -1559,12 +1692,18 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     $('repoLink').href = 'https://github.com/' + CFG.owner + '/' + CFG.repo;
     $('repoLabel').textContent = CFG.owner + '/' + CFG.repo;
     try { if (localStorage.getItem(VIEW_KEY) === 'gallery') listView = 'gallery'; } catch (e) {}
+    try {
+      const parts = (localStorage.getItem(SORT_KEY) || '').split('|');
+      if (['name', 'size', 'time'].indexOf(parts[0]) >= 0) sortKey = parts[0];
+      if (parts[1] === 'asc' || parts[1] === 'desc') sortDir = parts[1];
+    } catch (e) {}
     syncViewBtn();
     bind();
     applyTheme((function () { try { return localStorage.getItem(THEME_KEY) || 'dark'; } catch (e) { return 'dark'; } })());
     renderPathbar();
     await loadBackendConfig();
     $('fPass').value = storedPass() || backend.password || '';
+    await loadDirSizes();
     loadFiles('');
     loadStats();
   }
