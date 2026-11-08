@@ -318,20 +318,29 @@ export default {
       // ---------- 目录打包下载 ----------
       if (request.method === 'GET' && route === '/zip') {
         const dir = (url.searchParams.get('path') || '').replace(/^\/+|\/+$/g, '');
+        const namesRaw = url.searchParams.get('names') || '';
+        const wanted = namesRaw ? namesRaw.split(',').map((s) => s.trim()).filter(Boolean) : [];
         const r = await gh(
           '/repos/' + owner + '/' + repo + '/git/trees/' + encodeURIComponent(branch) + '?recursive=1'
         );
         if (!r.ok) return json({ error: '读取目录失败' }, r.status, cors);
         const j = await r.json();
         const prefix = dir ? dir + '/' : '';
-        const files = (j.tree || []).filter(
-          (it) =>
-            it.type === 'blob' &&
-            it.path.indexOf(prefix) === 0 &&
-            it.path !== META_FILE &&
-            it.path.indexOf(TRASH_DIR + '/') !== 0 &&
-            it.path !== TRASH_DIR
-        );
+        let files;
+        if (wanted.length) {
+          const hit = {};
+          wanted.forEach((n) => { hit[prefix + n] = true; });
+          files = (j.tree || []).filter((it) => it.type === 'blob' && hit[it.path]);
+        } else {
+          files = (j.tree || []).filter(
+            (it) =>
+              it.type === 'blob' &&
+              it.path.indexOf(prefix) === 0 &&
+              it.path !== META_FILE &&
+              it.path.indexOf(TRASH_DIR + '/') !== 0 &&
+              it.path !== TRASH_DIR
+          );
+        }
         if (!files.length) return json({ error: '目录为空或不存在' }, 404, cors);
 
         const total = files.reduce((sum, f) => sum + (f.size || 0), 0);
@@ -476,6 +485,64 @@ export default {
           return json({ error: '创建文件夹失败（HTTP ' + out.status + '）', detail: t.slice(0, 200) }, out.status, cors);
         }
         return json({ ok: true, path: dir }, 201, cors);
+      }
+
+      // ---------- 移动 / 重命名 ----------
+      if (route === '/move') {
+        const from = String(body.from || '').replace(/^\/+|\/+$/g, '');
+        const to = String(body.to || '').replace(/^\/+|\/+$/g, '');
+        if (!from || !to) return json({ error: '缺少 from 或 to' }, 400, cors);
+        if (from === to) return json({ ok: true, path: to, count: 0 }, 200, cors);
+        if (isProtected(from) || isProtected(to)) {
+          return json({ error: '基础文件不能移动或改名', protected: true }, 403, cors);
+        }
+        if (to.indexOf(from + '/') === 0) return json({ error: '不能移动到自己的子目录里' }, 400, cors);
+
+        const head = await gh(contentsPath(from));
+        if (!head.ok) return json({ error: '「' + from + '」不存在' }, 404, cors);
+        const info = await head.json();
+        const isDir = Array.isArray(info);
+
+        const target = await gh(contentsPath(to));
+        if (target.ok) return json({ error: '「' + to + '」已存在', exists: true }, 409, cors);
+
+        let toMove;
+        if (isDir) {
+          const r = await gh('/repos/' + owner + '/' + repo + '/git/trees/' + encodeURIComponent(branch) + '?recursive=1');
+          if (!r.ok) return json({ error: '读取目录失败' }, r.status, cors);
+          const j = await r.json();
+          toMove = (j.tree || [])
+            .filter((it) => it.type === 'blob' && it.path.indexOf(from + '/') === 0)
+            .map((it) => it.path);
+        } else {
+          toMove = [from];
+        }
+        if (!toMove.length) return json({ error: '目录是空的' }, 404, cors);
+
+        // 先把文件全部复制到新位置，都成功后再删旧的，避免中途失败丢文件
+        const meta = (await readMeta()).data;
+        const now = new Date().toISOString();
+        const done = [];
+        for (const p of toMove) {
+          const src = await readFileB64(p);
+          if (!src) continue;
+          const np = isDir ? to + p.slice(from.length) : to;
+          const w = await putFile(np, src.b64, 'move: ' + p + ' -> ' + np);
+          if (!w.ok) {
+            return json({ error: '移动失败（复制阶段 HTTP ' + w.status + '）', moved: done }, 500, cors);
+          }
+          done.push({ from: p, to: np });
+        }
+
+        const patch = {};
+        for (const d of done) {
+          await removeFile(d.from);
+          patch[d.from] = null;
+          patch[d.to] = meta[d.from] || meta[d.to] || now;
+        }
+        await writeMeta(patch);
+
+        return json({ ok: true, from, to, isDir, count: done.length }, 200, cors);
       }
 
       // ---------- 删除（移入回收站） ----------
