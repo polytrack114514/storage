@@ -166,10 +166,6 @@
   }
   .crumb { cursor: pointer; padding: 2px 6px; border-radius: 6px; transition: background .15s; }
   .crumb:hover { background: var(--surface-2); color: var(--accent); }
-  .crumb.drop-on { background: rgba(79, 140, 255, .16); color: var(--accent); }
-  .frow[draggable="true"] .fname { cursor: grab; }
-  .frow.dragging { opacity: .45; }
-  .frow.drop-on { border-color: var(--accent); background: rgba(79, 140, 255, .1); }
 
   .stat { font-size: 12px; font-weight: 400; color: var(--muted); margin-left: 6px; }
   .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
@@ -759,9 +755,7 @@
         const locked = !isDir && !currentPath && PROTECTED.indexOf(it.name) >= 0;
         const pv = !isDir && previewKind(it.name)
           ? '<button class="btn sm" data-pv="' + esc(p) + '">预览</button>' : '';
-        return '<div class="frow"' +
-          (locked ? '' : ' draggable="true" data-row="' + esc(p) + '"') +
-          (isDir ? ' data-dropdir="' + esc(p) + '"' : '') + '>' +
+        return '<div class="frow">' +
           '<span class="pickbox"><input type="checkbox" class="pick" data-pick="' + esc(p) + '"' +
             (picked.has(p) ? ' checked' : '') + ' /></span>' +
           '<span class="ficon">' + icon + '</span>' +
@@ -912,15 +906,6 @@
     await performMove(path, dest, '已移动到 ' + dest, '移动失败');
   }
 
-  async function moveToDir(from, targetDir) {
-    const name = from.split('/').pop();
-    const dir = from.slice(0, from.length - name.length).replace(/\/$/, '');
-    if (targetDir === dir) return;
-    if (targetDir && targetDir.indexOf(from + '/') === 0) return toast('不能移动到自己的子文件夹', 'err');
-    const dest = targetDir ? targetDir + '/' + name : name;
-    await performMove(from, dest, '已移动到 ' + dest, '移动失败');
-  }
-
   // ---------- 全仓库搜索 ----------
   function exitGlobal() {
     if (!globalMode) return;
@@ -1032,11 +1017,11 @@
 
   function renderPathbar() {
     const parts = currentPath.split('/').filter(Boolean);
-    let html = '<span class="crumb" data-path="" data-dropdir="">根目录</span>';
+    let html = '<span class="crumb" data-path="">根目录</span>';
     let acc = '';
     parts.forEach((p) => {
       acc = acc ? acc + '/' + p : p;
-      html += '<span>/</span><span class="crumb" data-path="' + esc(acc) + '" data-dropdir="' + esc(acc) + '">' + esc(p) + '</span>';
+      html += '<span>/</span><span class="crumb" data-path="' + esc(acc) + '">' + esc(p) + '</span>';
     });
     $('pathbar').innerHTML = html;
     $('pathbar').querySelectorAll('.crumb').forEach((el) => {
@@ -1459,48 +1444,6 @@
     $('btnSelDel').addEventListener('click', deleteSelected);
     $('btnSelClear').addEventListener('click', clearPick);
     $('btnTheme').addEventListener('click', toggleTheme);
-
-    // 拖拽移动：拖到文件夹行或面包屑
-    let dragSrc = '';
-    function dndClear() {
-      dragSrc = '';
-      $('fileList').querySelectorAll('.dragging, .drop-on').forEach((el) => el.classList.remove('dragging', 'drop-on'));
-      $('pathbar').querySelectorAll('.drop-on').forEach((el) => el.classList.remove('drop-on'));
-    }
-    $('fileList').addEventListener('dragstart', (e) => {
-      const row = e.target.closest('.frow[data-row]');
-      if (!row || e.target.closest('a, button, input')) { e.preventDefault(); return; }
-      dragSrc = row.dataset.row;
-      e.dataTransfer.effectAllowed = 'move';
-      try { e.dataTransfer.setData('text/plain', dragSrc); } catch (err) {}
-      row.classList.add('dragging');
-    });
-    $('fileList').addEventListener('dragend', dndClear);
-    ['fileList', 'pathbar'].forEach((id) => {
-      const box = $(id);
-      box.addEventListener('dragover', (e) => {
-        if (!dragSrc) return;
-        const tgt = e.target.closest('[data-dropdir]');
-        if (!tgt) return;
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        box.querySelectorAll('.drop-on').forEach((el) => { if (el !== tgt) el.classList.remove('drop-on'); });
-        tgt.classList.add('drop-on');
-      });
-      box.addEventListener('dragleave', (e) => {
-        const tgt = e.target.closest('[data-dropdir]');
-        if (tgt && !tgt.contains(e.relatedTarget)) tgt.classList.remove('drop-on');
-      });
-      box.addEventListener('drop', (e) => {
-        const tgt = e.target.closest('[data-dropdir]');
-        if (!tgt || !dragSrc) return;
-        e.preventDefault();
-        const src = dragSrc;
-        const target = tgt.dataset.dropdir || '';
-        dndClear();
-        moveToDir(src, target);
-      });
-    });
     $('fSearch').addEventListener('input', (e) => {
       fileQuery = e.target.value;
       if (globalMode) { if (!fileQuery.trim()) exitGlobal(); return; }
