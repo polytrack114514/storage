@@ -264,7 +264,7 @@
       <div class="card-title">上传文件</div>
       <div class="row">
         <input id="fPass" type="password" placeholder="上传/删除口令" autocomplete="current-password" style="width:150px" />
-        <input id="fFolder" type="text" placeholder="目标子目录（可留空）" autocomplete="off" style="width:180px" />
+        <input id="fFolder" type="text" placeholder="目标子目录（默认当前目录）" autocomplete="off" style="width:180px" />
       </div>
     </div>
 
@@ -296,6 +296,7 @@
     <div class="card-head">
       <div class="card-title">云端文件<span class="stat" id="statLine"></span></div>
       <div class="row">
+        <button class="btn sm" id="btnMkdir">新建文件夹</button>
         <button class="btn sm ghost" id="btnTrash">回收站</button>
         <button class="btn sm ghost" id="btnRefresh">刷新</button>
       </div>
@@ -571,8 +572,11 @@
   }
 
   async function loadFiles(path) {
-    if ((path || '') !== currentPath) { fileQuery = ''; $('fSearch').value = ''; }
+    const changed = (path || '') !== currentPath;
+    if (changed) { fileQuery = ''; $('fSearch').value = ''; }
     currentPath = path || '';
+    // 上传目标默认跟随当前浏览的目录
+    if (changed) $('fFolder').value = currentPath;
     renderPathbar();
     $('fileList').innerHTML = '<div class="empty"><span class="spin"></span> 加载中…</div>';
 
@@ -717,6 +721,24 @@
       $('fileList').querySelectorAll('[data-del]').forEach((el) => {
         el.addEventListener('click', () => deleteFile(el.dataset.del, el.dataset.sha, el.dataset.dir === 'true'));
       });
+  }
+
+  // ---------- 新建文件夹 ----------
+  async function mkdir() {
+    if (!ready) { toast('上传后端未配置，无法新建文件夹', 'err'); return; }
+    const pass = getPass();
+    if (!pass) return;
+    const where = currentPath ? '在「' + currentPath + '」里' : '在根目录';
+    const name = prompt('新建文件夹（' + where + '）\n输入文件夹名：', '');
+    if (name === null) return;
+    if (!String(name).trim()) { toast('文件夹名不能为空', 'err'); return; }
+    try {
+      await postJSON(workerBase() + '/mkdir', { path: currentPath, name: String(name).trim(), password: pass });
+      toast('已新建文件夹「' + String(name).trim() + '」', 'ok');
+      loadFiles(currentPath);
+    } catch (e) {
+      toast('新建失败：' + e.message, 'err');
+    }
   }
 
   // ---------- 仓库统计 ----------
@@ -1152,6 +1174,7 @@
       renderQueue();
     });
     $('btnRefresh').addEventListener('click', () => { loadFiles(currentPath); loadStats(); });
+    $('btnMkdir').addEventListener('click', mkdir);
     $('fSearch').addEventListener('input', (e) => { fileQuery = e.target.value; renderFiles(); });
     $('pvClose').addEventListener('click', closePreview);
     $('preview').addEventListener('click', (e) => { if (e.target === $('preview')) closePreview(); });
