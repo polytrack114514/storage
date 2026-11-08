@@ -19,7 +19,7 @@ const json = (obj, status, cors) =>
   });
 
 /** 仓库根目录的基础文件：禁止被覆盖或删除，防止站点被破坏 */
-const PROTECTED = ['backend.json', 'index.html', 'README.md', 'worker.js'];
+const PROTECTED = ['backend.json', 'index.html', 'README.md', 'worker.js', 'og.png'];
 const MAX_BYTES = 100 * 1024 * 1024;
 const ZIP_MAX = 80 * 1024 * 1024;
 
@@ -309,6 +309,28 @@ export default {
           .filter((it) => it.name !== META_FILE && it.name !== '.keep' && it.path !== TRASH_DIR)
           .map((it) => Object.assign({}, it, { uploadedAt: meta[it.path] || null }));
         return json(withTime, 200, cors);
+      }
+
+      // ---------- 目录占用大小（递归聚合） ----------
+      if (request.method === 'GET' && route === '/sizes') {
+        const r = await gh(
+          '/repos/' + owner + '/' + repo + '/git/trees/' + encodeURIComponent(branch) + '?recursive=1'
+        );
+        if (!r.ok) return json({ error: '读取仓库失败' }, r.status, cors);
+        const j = await r.json();
+        const map = {};
+        (j.tree || []).forEach((it) => {
+          if (it.type !== 'blob') return;
+          const p = it.path;
+          if (p === META_FILE || p.indexOf(TRASH_DIR + '/') === 0) return;
+          if (p.split('/').pop() === '.keep') return;
+          const parts = p.split('/');
+          for (let i = 1; i < parts.length; i++) {
+            const dir = parts.slice(0, i).join('/');
+            map[dir] = (map[dir] || 0) + (it.size || 0);
+          }
+        });
+        return json(map, 200, cors);
       }
 
       // ---------- 仓库统计 ----------
