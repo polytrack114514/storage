@@ -268,6 +268,34 @@ export default {
     const route = url.pathname.replace(/\/+$/, '') || '/';
 
     try {
+      // ---------- 全局搜索（跨目录，按文件名/路径匹配） ----------
+      if (request.method === 'GET' && route === '/search') {
+        const q = String(url.searchParams.get('q') || '').trim().toLowerCase();
+        if (!q) return json([], 200, cors);
+        const r = await gh(
+          '/repos/' + owner + '/' + repo + '/git/trees/' + encodeURIComponent(branch) + '?recursive=1'
+        );
+        if (!r.ok) return json({ error: '读取仓库失败' }, r.status, cors);
+        const j = await r.json();
+        const meta = (await readMeta()).data;
+        const items = (j.tree || [])
+          .filter((it) =>
+            it.type === 'blob' &&
+            it.path !== META_FILE &&
+            it.path !== TRASH_DIR &&
+            it.path.indexOf(TRASH_DIR + '/') !== 0 &&
+            it.path.split('/').pop() !== '.keep')
+          .filter((it) => it.path.toLowerCase().indexOf(q) >= 0)
+          .slice(0, 200)
+          .map((it) => ({
+            path: it.path,
+            name: it.path.split('/').pop(),
+            size: it.size || 0,
+            uploadedAt: meta[it.path] || null,
+          }));
+        return json(items, 200, cors);
+      }
+
       // ---------- 列出目录 ----------
       if (request.method === 'GET' && route === '/list') {
         const path = url.searchParams.get('path') || '';
