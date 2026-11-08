@@ -215,6 +215,9 @@
 
   .gbar { margin-bottom: 10px; }
   .gbar input[type="text"] { width: 100%; }
+  .sbar { display: flex; gap: 8px; align-items: center; }
+  .sbar input[type="text"] { flex: 1; min-width: 0; }
+  .searchhint { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
 
   .pickbox { display: flex; align-items: center; flex: none; }
   .pick { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; }
@@ -340,7 +343,10 @@
 
     <div class="pathbar" id="pathbar"></div>
     <div class="gbar">
-      <input type="text" id="fSearch" placeholder="搜索当前目录的文件名…" autocomplete="off" />
+      <div class="sbar">
+        <input type="text" id="fSearch" placeholder="搜索文件名，按回车搜全仓库…" autocomplete="off" />
+        <button class="btn sm" id="btnGlobal">全仓库</button>
+      </div>
     </div>
     <div class="filters" id="filters"></div>
     <div class="filters" id="timeFilters"></div>
@@ -351,6 +357,7 @@
       <button class="btn sm danger" id="btnSelDel">删除选中</button>
       <button class="btn sm ghost" id="btnSelClear">取消选择</button>
     </div>
+    <div class="searchhint" id="searchHint" hidden></div>
     <div class="files" id="fileList">
       <div class="empty">正在加载…</div>
     </div>
@@ -417,6 +424,7 @@
   let fileFilter = 'all';
   let fileQuery = '';
   let fileTime = 'all';
+  let globalMode = false;
   const picked = new Set();
   const queue = [];
 
@@ -623,6 +631,8 @@
     if (changed) $('fFolder').value = currentPath;
     picked.clear();
     updateSelbar();
+    globalMode = false;
+    $('searchHint').hidden = true;
     renderPathbar();
     $('fileList').innerHTML = '<div class="empty"><span class="spin"></span> 加载中…</div>';
 
@@ -886,6 +896,68 @@
     } catch (e) {
       toast('移动失败：' + e.message, 'err');
     }
+  }
+
+  // ---------- 全仓库搜索 ----------
+  function exitGlobal() {
+    if (!globalMode) return;
+    globalMode = false;
+    $('searchHint').hidden = true;
+    renderFiles();
+  }
+
+  async function globalSearch() {
+    if (!ready) { toast('上传后端未配置，无法全仓库搜索', 'err'); return; }
+    const q = fileQuery.trim();
+    if (!q) { exitGlobal(); return; }
+    $('searchHint').hidden = false;
+    $('searchHint').textContent = '正在全仓库搜索「' + q + '」…';
+    try {
+      const items = await getJSON(workerBase() + '/search?q=' + encodeURIComponent(q));
+      globalMode = true;
+      $('searchHint').textContent = '全仓库搜索「' + q + '」：' + items.length + ' 个结果 · 清空搜索框回到目录';
+      renderGlobal(Array.isArray(items) ? items : []);
+    } catch (e) {
+      $('searchHint').textContent = '搜索失败：' + e.message;
+    }
+  }
+
+  function renderGlobal(items) {
+    if (!items.length) {
+      $('fileList').innerHTML = '<div class="empty">全仓库没有匹配的文件</div>';
+      return;
+    }
+    $('fileList').innerHTML = items.map((it) =>
+      '<div class="frow">' +
+        '<span class="ficon">' + FILE_ICON + '</span>' +
+        '<div class="grow">' +
+          '<div class="fname">' + esc(it.name) + '</div>' +
+          '<div class="fmeta">' + esc(it.path) + ' · ' + fmtSize(it.size) +
+            (it.uploadedAt ? ' · ' + fmtTime(it.uploadedAt) : '') + '</div>' +
+        '</div>' +
+        '<div class="actions">' +
+          '<button class="btn sm" data-goloc="' + esc(it.path) + '">定位</button>' +
+          '<button class="btn sm" data-gcopy="' + esc(it.path) + '">复制直链</button>' +
+          '<button class="btn sm" data-gdl="' + esc(it.path) + '">下载</button>' +
+        '</div>' +
+      '</div>').join('');
+
+    $('fileList').querySelectorAll('[data-goloc]').forEach((el) => {
+      el.addEventListener('click', () => {
+        const p = el.dataset.goloc;
+        const dir = p.indexOf('/') >= 0 ? p.slice(0, p.lastIndexOf('/')) : '';
+        fileQuery = '';
+        $('fSearch').value = '';
+        exitGlobal();
+        loadFiles(dir);
+      });
+    });
+    $('fileList').querySelectorAll('[data-gcopy]').forEach((el) => {
+      el.addEventListener('click', () => copyLink(el.dataset.gcopy));
+    });
+    $('fileList').querySelectorAll('[data-gdl]').forEach((el) => {
+      el.addEventListener('click', () => downloadFile(el.dataset.gdl));
+    });
   }
 
   // ---------- 主题 ----------
@@ -1364,7 +1436,15 @@
     $('btnSelDel').addEventListener('click', deleteSelected);
     $('btnSelClear').addEventListener('click', clearPick);
     $('btnTheme').addEventListener('click', toggleTheme);
-    $('fSearch').addEventListener('input', (e) => { fileQuery = e.target.value; renderFiles(); });
+    $('fSearch').addEventListener('input', (e) => {
+      fileQuery = e.target.value;
+      if (globalMode) { if (!fileQuery.trim()) exitGlobal(); return; }
+      renderFiles();
+    });
+    $('fSearch').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); globalSearch(); }
+    });
+    $('btnGlobal').addEventListener('click', globalSearch);
     $('pvClose').addEventListener('click', closePreview);
     $('preview').addEventListener('click', (e) => { if (e.target === $('preview')) closePreview(); });
     document.addEventListener('keydown', (e) => {
