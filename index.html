@@ -25,22 +25,12 @@
   html, body { margin: 0; padding: 0; }
   [hidden] { display: none !important; }
   body {
-    background:
-      radial-gradient(1200px 600px at 12% -12%, rgba(0, 255, 156, .1) 0%, transparent 60%),
-      radial-gradient(900px 500px at 88% 112%, rgba(0, 255, 156, .05) 0%, transparent 62%),
-      linear-gradient(rgba(0, 255, 156, .04) 1px, transparent 1px) 0 0 / 100% 40px,
-      linear-gradient(90deg, rgba(0, 255, 156, .04) 1px, transparent 1px) 0 0 / 40px 100%,
-      var(--bg);
+    background: var(--bg);
     color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
       "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
     font-size: 14px; line-height: 1.6; min-height: 100vh;
     -webkit-font-smoothing: antialiased;
-  }
-  body::after {
-    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
-    background: repeating-linear-gradient(0deg, rgba(0, 255, 156, .03) 0 1px, transparent 1px 3px);
-    opacity: .45;
   }
   .wrap { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 28px 20px 80px; }
 
@@ -48,7 +38,7 @@
   .brand { display: flex; align-items: center; gap: 12px; }
   .logo {
     width: 40px; height: 40px; border-radius: 6px; flex: none;
-    background: linear-gradient(140deg, #00ff9c, #0b8f63);
+    background: var(--accent);
     display: grid; place-items: center;
     box-shadow: 0 0 26px -6px rgba(0, 255, 156, .75);
   }
@@ -151,7 +141,7 @@
   .badge.err { color: var(--accent-2); border-color: rgba(0,255,156,.25); background: rgba(0,255,156,.06); }
   .badge.run { color: var(--accent); border-color: rgba(0,255,156,.4); background: var(--accent-soft); }
   .bar { height: 3px; border-radius: 3px; background: var(--border); overflow: hidden; margin-top: 6px; }
-  .bar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #00ff9c, #7dffc4); transition: width .2s; }
+  .bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
 
   .pathbar {
     display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
@@ -244,7 +234,7 @@
   /* ===== 黑绿终端风 ===== */
   .card {
     position: relative;
-    background: linear-gradient(180deg, rgba(10, 18, 13, .94), rgba(5, 10, 7, .9));
+    background: var(--surface);
     border: 1px solid var(--border);
     box-shadow: inset 0 0 0 1px rgba(0, 255, 156, .05), 0 24px 60px -46px rgba(0, 255, 156, .55);
   }
@@ -269,7 +259,7 @@
   .drop:hover, .drop.over { box-shadow: inset 0 0 30px -20px var(--accent); }
   .frow:hover { background: rgba(0, 255, 156, .05); border-color: var(--border-strong); }
   .selbar { border-color: var(--border-strong); background: rgba(0, 255, 156, .04); }
-  .bar > i { background: linear-gradient(90deg, #00ff9c, #7dffc4); }
+  .bar > i { background: var(--accent); }
   .toast { border-radius: 4px; }
   .pv-box { border-radius: 6px; box-shadow: 0 0 40px -18px rgba(0, 255, 156, .6); }
   .pathbar { letter-spacing: .3px; }
