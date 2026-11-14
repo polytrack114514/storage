@@ -1555,12 +1555,17 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
 
   async function deleteDir(path, pass) {
     const list = await listDir(path);
-    if (!Array.isArray(list)) return;
-    for (const it of list.slice().reverse()) {
-      const child = path + '/' + it.name;
-      if (it.type === 'dir') await deleteDir(child, pass);
-      else await postJSON(workerBase() + '/delete', { path: child, sha: it.sha, password: pass });
+    if (Array.isArray(list)) {
+      for (const it of list.slice().reverse()) {
+        const child = path + '/' + it.name;
+        if (it.type === 'dir') await deleteDir(child, pass);
+        else await postJSON(workerBase() + '/delete', { path: child, sha: it.sha, password: pass });
+      }
     }
+    // 空文件夹是靠 .keep 占位的，列表里不显示，这里单独删掉
+    try {
+      await postJSON(workerBase() + '/delete', { path: path + '/.keep', sha: '', password: pass });
+    } catch (e) { /* 没有 .keep 就跳过 */ }
   }
 
   // ---------- 上传队列 ----------
