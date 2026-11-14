@@ -185,15 +185,16 @@
   .chip.on { border-color: rgba(79,140,255,.55); background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 
   .files { display: flex; flex-direction: column; gap: 6px; }
-  .files.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
-  .files.gallery .frow { position: relative; flex-direction: column; align-items: stretch; gap: 6px; padding: 8px; border: 1px solid var(--border); }
+  .files.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .files.gallery .frow { position: relative; flex-direction: column; align-items: stretch; gap: 6px; padding: 8px; border: 1px solid var(--border); min-width: 0; }
   .files.gallery .pickbox { position: absolute; left: 8px; top: 8px; z-index: 2; }
-  .files.gallery .ficon { width: 100%; height: 96px; border-radius: 6px; overflow: hidden; }
+  .files.gallery .ficon { width: 100%; height: 92px; border-radius: 6px; overflow: hidden; }
   .files.gallery .ficon svg { width: 24px; height: 24px; }
   .files.gallery .ficon img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .files.gallery .fname { font-size: 12px; }
-  .files.gallery .actions { width: 100%; justify-content: flex-start; }
-  .files.gallery .actions .btn { padding: 3px 6px; font-size: 10.5px; }
+  .files.gallery .fname { font-size: 12px; word-break: break-all; }
+  .files.gallery .fmeta { font-size: 10.5px; }
+  .files.gallery .actions { width: 100%; justify-content: flex-start; flex-wrap: wrap; gap: 4px; min-width: 0; }
+  .files.gallery .actions .btn { padding: 3px 6px; font-size: 10.5px; flex: 0 0 auto; }
   .frow {
     display: flex; align-items: center; gap: 12px; padding: 9px 12px;
     border-radius: 10px; border: 1px solid transparent; transition: background .15s, border-color .15s;
