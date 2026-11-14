@@ -199,6 +199,10 @@
     border-radius: 10px; border: 1px solid transparent; transition: background .15s, border-color .15s;
   }
   .frow:hover { background: var(--surface-2); border-color: var(--border); }
+  .frow.newrow { border: 1px dashed var(--border-strong); cursor: pointer; margin-top: 2px; }
+  .frow.newrow:hover { border-color: var(--accent); background: var(--surface-2); }
+  .frow.newrow .ficon.plus { color: var(--accent); font-size: 20px; font-weight: 600; line-height: 1; }
+  .frow.newrow .fname { color: var(--muted); }
   .ficon { width: 28px; height: 28px; border-radius: 8px; background: var(--surface-2); display: grid; place-items: center; flex: none; }
   .ficon svg { width: 15px; height: 15px; stroke: var(--muted); }
   .frow:hover .ficon svg { stroke: var(--accent); }
@@ -446,7 +450,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       <div class="empty">正在加载…</div>
     </div>
     <div class="hint">
-      <span>删除的文件会先移到仓库的 <code>.trash</code> 目录，可以点「恢复」原路放回；只有「彻底删除」才会真正移除。</span>
+      <span>删除的文件会先移到仓库的 <code>.trash</code> 目录，可以点「恢复」原路放回；只有「彻底删除」才会真正移除。删除超过 <b>30 天</b>的文件会在打开回收站时自动彻底删除。</span>
     </div>
   </section>
 
@@ -818,6 +822,22 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     return (Date.now() - t) / 86400000 <= Number(fileTime);
   }
 
+  function newFolderRow() {
+    const where = currentPath ? '在「' + esc(currentPath) + '」下新建' : '在根目录新建';
+    return '<div class="frow newrow" id="newRow">' +
+      '<span class="ficon plus">+</span>' +
+      '<div class="grow">' +
+        '<div class="fname">新建文件夹</div>' +
+        '<div class="fmeta">' + where + '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function bindNewFolderRow() {
+    const el = $('newRow');
+    if (el) el.addEventListener('click', mkdir);
+  }
+
   function renderFiles() {
     $('fileList').classList.toggle('gallery', listView === 'gallery');
     const files = fileItems.filter((it) => it.type !== 'dir');
@@ -867,7 +887,9 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     if (!items.length) {
       const narrowed = q || fileFilter !== 'all' || fileTime !== 'all';
       $('fileList').innerHTML = '<div class="empty">' +
-        (narrowed ? '没有符合条件的文件' : '这里还没有文件，上传第一个吧') + '</div>';
+        (narrowed ? '没有符合条件的文件' : '这里还没有文件，上传第一个吧') + '</div>' +
+        (listView === 'list' ? newFolderRow() : '');
+      bindNewFolderRow();
       return;
     }
 
@@ -905,7 +927,9 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
               '<button class="btn sm danger" data-del="' + esc(p) + '" data-sha="' + (it.sha || '') + '" data-dir="' + isDir + '">删除</button>') +
           '</div>' +
         '</div>';
-      }).join('');
+      }).join('') + (listView === 'list' ? newFolderRow() : '');
+
+    bindNewFolderRow();
 
       $('fileList').querySelectorAll('[data-path]').forEach((el) => {
         if (el.dataset.dir === 'true') el.addEventListener('click', () => loadFiles(el.dataset.path));
@@ -1427,6 +1451,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     try {
       const res = await fetch(workerBase() + '/trash', { cache: 'no-store' });
       if (!res.ok) throw new Error('HTTP ' + res.status);
+      const cleaned = parseInt(res.headers.get('X-Trash-Cleaned') || '0', 10);
+      if (cleaned > 0) toast('已自动清理 ' + cleaned + ' 个超过 30 天的文件', 'ok');
       const items = await res.json();
       if (!Array.isArray(items) || !items.length) {
         $('trashStat').textContent = '';
