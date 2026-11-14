@@ -28,6 +28,10 @@ const isProtected = (p) => !String(p || '').includes('/') && PROTECTED.indexOf(p
 /** 回收站目录：删除的文件先挪到这里，可以再恢复 */
 const TRASH_DIR = '.trash';
 
+/** 回收站自动清理：超过这个天数的文件会被彻底删除 */
+const TRASH_TTL_DAYS = 30;
+const TRASH_TTL_MS = TRASH_TTL_DAYS * 24 * 60 * 60 * 1000;
+
 /** ---------- ZIP 打包（STORE 无压缩） ---------- */
 const CRC_TABLE = (() => {
   const t = new Uint32Array(256);
@@ -155,6 +159,7 @@ export default {
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
       'Access-Control-Max-Age': '86400',
+      'Access-Control-Expose-Headers': 'X-Trash-Cleaned',
     };
 
     if (request.method === 'OPTIONS') {
@@ -264,6 +269,32 @@ export default {
       });
     };
 
+    /** 清理回收站里删除超过 30 天的文件，返回清理数量（每次最多 40 个） */
+    const cleanTrash = async () => {
+      const r = await gh(
+        '/repos/' + owner + '/' + repo + '/git/trees/' + encodeURIComponent(branch) + '?recursive=1'
+      );
+      if (!r.ok) return 0;
+      const j = await r.json();
+      const meta = (await readMeta()).data;
+      const now = Date.now();
+      const patch = {};
+      let n = 0;
+      for (const it of (j.tree || [])) {
+        if (n >= 40) break;
+        if (it.type !== 'blob' || it.path.indexOf(TRASH_DIR + '/') !== 0) continue;
+        const at = meta[it.path] ? Date.parse(meta[it.path]) : 0;
+        if (!at || now - at < TRASH_TTL_MS) continue;
+        const out = await removeFile(it.path);
+        if (out.ok) {
+          n = n + 1;
+          patch[it.path] = null;
+        }
+      }
+      if (Object.keys(patch).length) await writeMeta(patch);
+      return n;
+    };
+
     const url = new URL(request.url);
     const route = url.pathname.replace(/\/+$/, '') || '/';
 
@@ -347,8 +378,9 @@ export default {
         return json({ files: blobs.length, bytes, passwordRequired: !!env.UPLOAD_PASSWORD }, 200, cors);
       }
 
-      // ---------- 回收站列表 ----------
+      // ---------- 回收站列表（顺带清理超过 30 天的旧文件） ----------
       if (request.method === 'GET' && route === '/trash') {
+        const cleaned = await cleanTrash();
         const r = await gh(
           '/repos/' + owner + '/' + repo + '/git/trees/' + encodeURIComponent(branch) + '?recursive=1'
         );
@@ -362,7 +394,14 @@ export default {
             size: it.size || 0,
             deletedAt: meta[it.path] || null,
           }));
-        return json(items, 200, cors);
+        return new Response(JSON.stringify(items), {
+          status: 200,
+          headers: {
+            ...cors,
+            'Content-Type': 'application/json; charset=utf-8',
+            'X-Trash-Cleaned': String(cleaned),
+          },
+        });
       }
 
       // ---------- 目录打包下载 ----------
