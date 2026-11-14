@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>站点状态 · 文件云盘 / 图床</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%234f8cff'/%3E%3Cpath d='M5 15l4-4 3 3 5-6' stroke='%23fff' stroke-width='2' fill='none'/%3E%3C/svg%3E" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="站点状态 · 文件云盘 / 图床" />
+<meta property="og:description" content="文件云盘与图床的在线状态、响应时间和存储用量。" />
+<meta property="og:url" content="https://polytrack114514.github.io/storage/status.html" />
+<style>
+  :root {
+    --bg: #0d0f14; --surface: #141821; --surface-2: #1a1f2a;
+    --border: #2a303c; --border-strong: #38404f;
+    --text: #e8eaef; --muted: #8b93a3;
+    --accent: #4f8cff; --accent-soft: rgba(79, 140, 255, .12);
+    --ok: #35c07a; --err: #f0626b; --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: 14px; line-height: 1.6; min-height: 100vh;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 28px 20px 70px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+  h1 { font-size: 20px; margin: 0; letter-spacing: .5px; }
+  .sub { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text);
+    padding: 7px 13px; border-radius: 8px; font-size: 13px; font-family: inherit;
+    cursor: pointer; text-decoration: none; transition: border-color .16s, background .16s;
+  }
+  .btn:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .btn.sm { padding: 5px 10px; font-size: 12px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; margin-bottom: 14px; }
+  .card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+  .card-title { font-weight: 600; font-size: 14px; }
+  .item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--border); }
+  .item:first-of-type { border-top: 0; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
+  .dot.ok { background: var(--ok); box-shadow: 0 0 0 3px rgba(53, 192, 122, .15); }
+  .dot.bad { background: var(--err); box-shadow: 0 0 0 3px rgba(240, 98, 107, .15); }
+  .dot.wait { background: var(--accent); }
+  .grow { flex: 1; min-width: 0; }
+  .name { font-weight: 550; font-size: 13.5px; }
+  .meta { color: var(--muted); font-size: 12px; word-break: break-all; }
+  .ms { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .hint { color: var(--muted); font-size: 12.5px; margin-top: 10px; }
+  .foot { margin-top: 26px; padding-top: 16px; border-top: 1px solid var(--border); text-align: center; font-size: 12px; line-height: 1.9; color: var(--muted); }
+  .foot a { color: var(--accent); text-decoration: none; }
+  .foot a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>站点状态</h1>
+      <div class="sub" id="clock">正在检测…</div>
+    </div>
+    <div class="row">
+      <a class="btn sm" href="./">云盘</a>
+      <a class="btn sm" href="../img/">图床</a>
+      <button class="btn sm" id="btnRefresh">重新检测</button>
+    </div>
+  </header>
+
+  <section class="card">
+    <div class="card-head">
+      <div class="card-title">服务端点</div>
+      <div class="row" style="font-size:12px;color:var(--muted)">
+        <span>自动刷新：30 秒</span>
+      </div>
+    </div>
+    <div id="services"></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <div class="card-title">站点页面</div>
+    </div>
+    <div id="pages"></div>
+  </section>
+
+  <div class="hint">检测方式：直接请求各服务地址并测量耗时；数据来自后端 <code>/stats</code>，仅供自用参考。</div>
+
+  <footer class="foot">
+    <div>创作者：Shen Xiong</div>
+    <div>联系作者邮箱：<a href="mailto:polytrack1@outlook.com">polytrack1@outlook.com</a> · 作者B站号：<a href="https://space.bilibili.com/3493133302106318/upload/video" target="_blank" rel="noopener">https://space.bilibili.com/3493133302106318/upload/video</a></div>
+    <div>致谢 AI：TRAE CN {DeepSeek-V4.1-Flash}</div>
+    <div style="margin-top:6px;font-size:11.5px">© 2026 storage.</div>
+  </footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var STORAGE_API = 'https://file-cloud-share.pages.dev';
+  var IMG_API = 'https://img-bed-84l.pages.dev';
+  var SITE = 'https://polytrack114514.github.io';
+
+  function fmtSize(n) {
+    if (n === null || n === undefined) return '';
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+    if (n < 1024 * 1024 * 1024) return (n / 1024 / 1024).toFixed(1) + ' MB';
+    return (n / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+  }
+
+  function row(name, url) {
+    return '<div class="item" data-key="' + esc(url) + '">' +
+      '<span class="dot wait"></span>' +
+      '<div class="grow">' +
+        '<div class="name">' + esc(name) + '</div>' +
+        '<div class="meta">' + esc(url) + '</div>' +
+      '</div>' +
+      '<span class="ms">检测中…</span>' +
+    '</div>';
+  }
+
+  function fill(boxId, list) {
+    document.getElementById(boxId).innerHTML = list.map(function (x) {
+      return row(x[0], x[1]);
+    }).join('');
+  }
+
+  function paint(url, ok, detail, ms) {
+    var el = document.querySelector('[data-key="' + url + '"]');
+    if (!el) return;
+    var dot = el.querySelector('.dot');
+    dot.className = 'dot ' + (ok ? 'ok' : 'bad');
+    el.querySelector('.ms').textContent = (ms === null ? '—' : ms + ' ms');
+    var meta = el.querySelector('.meta');
+    meta.textContent = detail || url;
+  }
+
+  async function timed(url, opts) {
+    var t0 = performance.now();
+    var res = await fetch(url, opts || {});
+    return { ms: Math.round(performance.now() - t0), res: res };
+  }
+
+  async function checkStats(name, url, boxId, detailFn) {
+    try {
+      var r = await timed(url + '/stats', { cache: 'no-store' });
+      if (!r.res.ok) throw new Error('HTTP ' + r.res.status);
+      var data = await r.res.json();
+      paint(url, true, name + ' · ' + (detailFn ? detailFn(data) : '正常'), r.ms);
+    } catch (e) {
+      paint(url, false, name + ' · ' + (e && e.message ? e.message : '不可用'), null);
+    }
+  }
+
+  async function checkPage(url) {
+    try {
+      var r = await timed(url, { mode: 'no-cors', cache: 'no-store' });
+      paint(url, true, '页面可访问', r.ms);
+    } catch (e) {
+      paint(url, false, '页面不可访问', null);
+    }
+  }
+
+  async function run() {
+    var t = new Date();
+    document.getElementById('clock').textContent =
+      '最近检测：' + t.toLocaleString('zh-CN', { hour12: false });
+
+    fill('services', [
+      ['云盘后端 /stats', STORAGE_API],
+      ['图床后端 /stats', IMG_API]
+    ]);
+    fill('pages', [
+      ['云盘页面', SITE + '/storage/'],
+      ['图床页面', SITE + '/img/' ]
+    ]);
+
+    await Promise.all([
+      checkStats('云盘后端', STORAGE_API, null, function (d) {
+        return (d.files || 0) + ' 个文件 · ' + fmtSize(d.bytes || 0);
+      }),
+      checkStats('图床后端', IMG_API, null, function (d) {
+        return (d.images || 0) + ' 张图片 · ' + fmtSize(d.bytes || 0);
+      }),
+      checkPage(SITE + '/storage/'),
+      checkPage(SITE + '/img/')
+    ]);
+  }
+
+  document.getElementById('btnRefresh').addEventListener('click', run);
+  document.addEventListener('DOMContentLoaded', function () {
+    run();
+    setInterval(run, 30000);
+  });
+})();
+</script>
+</body>
+</html>
