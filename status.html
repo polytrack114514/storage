@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>站点状态 · 文件云盘 / 图床</title>
+<title>站点状态 · 站点总览</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%234f8cff'/%3E%3Cpath d='M5 15l4-4 3 3 5-6' stroke='%23fff' stroke-width='2' fill='none'/%3E%3C/svg%3E" />
 <meta property="og:type" content="website" />
-<meta property="og:title" content="站点状态 · 文件云盘 / 图床" />
-<meta property="og:description" content="文件云盘与图床的在线状态、响应时间和存储用量。" />
+<meta property="og:title" content="站点状态 · 站点总览" />
+<meta property="og:description" content="云盘1、云盘2、图床、阅读器与主页的在线状态、响应时间和存储用量。" />
 <meta property="og:url" content="https://polytrack114514.github.io/storage/status.html" />
 <style>
   :root {
@@ -64,8 +64,7 @@
       <div class="sub" id="clock">正在检测…</div>
     </div>
     <div class="row">
-      <a class="btn sm" href="./">云盘</a>
-      <a class="btn sm" href="../img/">图床</a>
+      <a class="btn sm" href="https://polytrack114514.github.io/">主页</a>
       <button class="btn sm" id="btnRefresh">重新检测</button>
     </div>
   </header>
@@ -103,6 +102,7 @@
 
   var STORAGE_API = 'https://file-cloud-share.pages.dev';
   var IMG_API = 'https://img-bed-84l.pages.dev';
+  var CLOUD2_API = 'https://file-cloud-2.pages.dev';
   var SITE = 'https://polytrack114514.github.io';
 
   function fmtSize(n) {
@@ -163,6 +163,21 @@
     }
   }
 
+  async function checkReader() {
+    var url = CLOUD2_API + '/reader/tree';
+    try {
+      var r = await timed(url, { cache: 'no-store' });
+      if (!r.res.ok) throw new Error('HTTP ' + r.res.status);
+      var data = await r.res.json();
+      var files = data.files || [];
+      var bytes = 0;
+      files.forEach(function (f) { bytes += f.size || 0; });
+      paint(url, true, '阅读器代理 · ' + files.length + ' 个文件 · ' + fmtSize(bytes), r.ms);
+    } catch (e) {
+      paint(url, false, '阅读器代理 · ' + (e && e.message ? e.message : '不可用'), null);
+    }
+  }
+
   async function checkPage(url) {
     try {
       var r = await timed(url, { mode: 'no-cors', cache: 'no-store' });
@@ -178,23 +193,35 @@
       '最近检测：' + t.toLocaleString('zh-CN', { hour12: false });
 
     fill('services', [
-      ['云盘后端 /stats', STORAGE_API],
-      ['图床后端 /stats', IMG_API]
+      ['云盘1 后端 /stats', STORAGE_API],
+      ['云盘2 后端 /stats', CLOUD2_API],
+      ['图床后端 /stats', IMG_API],
+      ['阅读器代理 /reader/tree', CLOUD2_API + '/reader/tree']
     ]);
     fill('pages', [
-      ['云盘页面', SITE + '/storage/'],
-      ['图床页面', SITE + '/img/' ]
+      ['主页面', SITE + '/'],
+      ['云盘1 页面', SITE + '/storage/'],
+      ['云盘2 页面', SITE + '/cloud2/'],
+      ['图床页面', SITE + '/img/'],
+      ['阅读器页面', SITE + '/reader/']
     ]);
 
     await Promise.all([
-      checkStats('云盘后端', STORAGE_API, null, function (d) {
+      checkStats('云盘1 后端', STORAGE_API, null, function (d) {
         return (d.files || 0) + ' 个文件 · ' + fmtSize(d.bytes || 0);
+      }),
+      checkStats('云盘2 后端', CLOUD2_API, null, function (d) {
+        return (d.count || 0) + ' 个文件 · ' + fmtSize(d.bytes || 0);
       }),
       checkStats('图床后端', IMG_API, null, function (d) {
         return (d.images || 0) + ' 张图片 · ' + fmtSize(d.bytes || 0);
       }),
+      checkReader(),
+      checkPage(SITE + '/'),
       checkPage(SITE + '/storage/'),
-      checkPage(SITE + '/img/')
+      checkPage(SITE + '/cloud2/'),
+      checkPage(SITE + '/img/'),
+      checkPage(SITE + '/reader/')
     ]);
   }
 
