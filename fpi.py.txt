@@ -1,0 +1,12 @@
+```python
+#发送方
+with open('file.txt',  'rb') as f;
+	chunk = f.read(1024) #每块1kb
+	while chunk:
+	
+	chunk = f.read(1024)
+with open('new.txt','wh') as f:
+	while run:
+		chunk = receive_chunk()
+		if not chunk:break
+		f.write(chunk)
